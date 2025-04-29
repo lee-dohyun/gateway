@@ -1,3 +1,15 @@
 spring:
   application:
     name: gateway
+  cloud:
+    gateway:
+      mvc:
+        routes:
+        - id : front
+          predicates:
+          - Host=front.leedohyun.com
+          uri: http://home.front:8080
+        - id : tool
+          predicates:
+          - Host=tool.leedohyun.com
+          uri: http://tool:8080
