@@ -30,6 +30,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Get project name from settings.gradle
+        run: echo "PROJECT_NAME=$(grep '^rootProject.name' settings.gradle | cut -d'=' -f2 | tr -d \" '\")" >> $GITHUB_ENV
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
