@@ -7,8 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: eclipse-temurin:21-jdk-alpine
 
     steps:
       - name: Checkout code
