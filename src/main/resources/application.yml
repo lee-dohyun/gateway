@@ -8,7 +8,7 @@ spring:
         - id : front
           predicates:
           - Host=front.leedohyun.com
-          uri: http://home.front:8080
+          uri: http://home.front:3000
         - id : tool
           predicates:
           - Host=tool.leedohyun.com
