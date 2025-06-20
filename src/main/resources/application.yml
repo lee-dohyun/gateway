@@ -9,6 +9,10 @@ spring:
           predicates:
           - Host=front.leedohyun.com
           uri: http://home.front:3000
+        - id : customer
+          predicates:
+          - Host=customer.leedohyun.com
+          uri: http://home.front:3000
         - id : wordpress
           predicates:
           - Host=wordpress.leedohyun.com
