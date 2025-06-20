@@ -8,7 +8,7 @@ spring:
         - id : front
           predicates:
           - Host=front.leedohyun.com
-          uri: http://172.18.0.5:3000
+          uri: http://home.front:3000
         - id : wordpress
           predicates:
           - Host=wordpress.leedohyun.com
