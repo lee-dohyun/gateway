@@ -9,6 +9,10 @@ spring:
           predicates:
           - Host=front.leedohyun.com
           uri: http://home.front:3000
+        - id : wordpres
+          predicates:
+          - Host=wordpress.leedohyun.com
+          uri: http://wordpress-01:80
         - id : tool
           predicates:
           - Host=tool.leedohyun.com
