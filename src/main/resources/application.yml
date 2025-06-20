@@ -21,3 +21,15 @@ spring:
           predicates:
           - Host=tool.leedohyun.com
           uri: http://tool:8080
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "https://*.leedohyun.com"
+            allowedMethods:
+              - GET
+              - POST
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
