@@ -96,3 +96,7 @@ spring:
           predicates:
             - Host=tt.leedohyun.com
           uri: http://home.front:3000
+        - id: datadog
+          predicates:
+            - Host=datadog.leedohyun.com
+          uri: http://datadog:8080
