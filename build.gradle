@@ -21,7 +21,7 @@ repositories {
 
 ext {
 	set('springCloudVersion', "2024.0.1")
-	set('datadogStatsdVersion', "4.2.0")
+	set('datadogStatsdVersion', "4.0.0")
 }
 
 dependencies {
