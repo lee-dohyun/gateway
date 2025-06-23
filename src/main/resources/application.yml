@@ -100,3 +100,12 @@ spring:
           predicates:
             - Host=datadog.leedohyun.com
           uri: http://datadog:8080
+
+logging:
+  level:
+    root: INFO
+    "[com.dh.gateway]": DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  charset:
+    console: UTF-8
