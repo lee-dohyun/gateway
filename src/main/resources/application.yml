@@ -48,6 +48,7 @@ spring:
           predicates:
             - Host=image-minio.leedohyun.com
             - Host=static-minio.leedohyun.com
+            - Path=/**
           uri: http://minio-01:9001
         - id: imap
           predicates:
