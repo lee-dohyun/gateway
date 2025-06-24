@@ -9,30 +9,44 @@ spring:
           predicates:
             - Host=front.leedohyun.com
           uri: http://home.front:3000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: customer
           predicates:
             - Host=customer.leedohyun.com
           uri: http://customer.front:3000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: wordpress
           predicates:
             - Host=wordpress.leedohyun.com
           uri: http://wordpress-01:80
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: tool
           predicates:
             - Host=tool.leedohyun.com
           uri: http://tool:8080
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: auth
           predicates:
             - Host=auth.leedohyun.com
           uri: http://auth.api:8080
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: portainer
           predicates:
             - Host=portainer.leedohyun.com
           uri: http://portainer:9000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: blog
           predicates:
             - Host=blog.leedohyun.com
           uri: http://wordpress-01:80
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: git
           predicates:
             - Host=git.leedohyun.com
@@ -40,63 +54,91 @@ spring:
             - Host=gitlab1.leedohyun.com
             - Host=gitlab2.leedohyun.com
           uri: http://gitlab-01:80
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: image
           predicates:
             - Host=image.leedohyun.com
           uri: http://minio-01:9000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: image-minio
           predicates:
             - Host=image-minio.leedohyun.com
             - Host=static-minio.leedohyun.com
             - Path=/**
           uri: http://minio-01:9001
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: imap
           predicates:
             - Host=imap.leedohyun.com
             - Host=mail.leedohyun.com
           uri: http://mailserver:443
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: keycloak
           predicates:
             - Host=keycloak.leedohyun.com
           uri: http://keycloak:8080
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: main
           predicates:
             - Host=leedohyun.com
             - Host=www.leedohyun.com
           uri: http://wordpress-01:80
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: npm
           predicates:
             - Host=npm.leedohyun.com
           uri: http://nginx-proxy-manager:81
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: product
           predicates:
             - Host=product.leedohyun.com
           uri: http://front.product:3000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: redmine
           predicates:
             - Host=redmine.leedohyun.com
             - Host=alm.leedohyun.com
           uri: http://redmine-01:3000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: registry
           predicates:
             - Host=registry.leedohyun.com
           uri: http://registry-01:5000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: resume
           predicates:
             - Host=resume.leedohyun.com
           uri: http://wordpress-02:80
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: router
           predicates:
             - Host=router.leedohyun.com
           uri: https://leedohyun.asuscomm.com:8443
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: static
           predicates:
             - Host=static.leedohyun.com
           uri: http://minio-01:9000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         - id: tt
           predicates:
             - Host=tt.leedohyun.com
           uri: http://home.front:3000
+          filters:
+            - SetRequestHeader=Host, {request.headers.Host}
         # - id: datadog
         #   predicates:
         #     - Host=datadog.leedohyun.com
