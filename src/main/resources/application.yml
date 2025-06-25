@@ -8,26 +8,10 @@ spring:
             predicates:
             - Host=front.leedohyun.com
             uri: http://home.front:3000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
          -  id: customer
             predicates:
             - Host=customer.leedohyun.com
             uri: http://customer.front:3000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
          -  id: wordpress
             predicates:
             - Host=wordpress.leedohyun.com
