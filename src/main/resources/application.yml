@@ -12,18 +12,6 @@ spring:
             predicates:
             - Host=customer.leedohyun.com
             uri: http://customer.front:3000
-         -  id: wordpress
-            predicates:
-            - Host=wordpress.leedohyun.com
-            uri: http://wordpress-01:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
          -  id: tool
             predicates:
             - Host=tool.leedohyun.com
@@ -40,41 +28,10 @@ spring:
             predicates:
             - Host=auth.leedohyun.com
             uri: http://auth.api:8080
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: portainer
-            predicates:
-            - Host=portainer.leedohyun.com
-            uri: http://portainer:9000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: blog
-            predicates:
-            - Host=blog.leedohyun.com
-            uri: http://wordpress-01:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
          -  id: image
             predicates:
             - Host=image.leedohyun.com
+            - Host=static.leedohyun.com
             uri: http://minio-01:9000
             filters:
             - SetRequestHeader=Host, {request.headers.Host}
@@ -88,7 +45,6 @@ spring:
             predicates:
             - Host=image-minio.leedohyun.com
             - Host=static-minio.leedohyun.com
-            - Path=/**
             uri: http://minio-01:9001
             filters:
             - SetRequestHeader=Host, {request.headers.Host}
@@ -110,19 +66,6 @@ spring:
             - SetRequestHeader=Cookie, {request.headers.Cookie}
             - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
             - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: main
-            predicates:
-            - Host=leedohyun.com
-            - Host=www.leedohyun.com
-            uri: http://wordpress-01:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
          -  id: product
             predicates:
             - Host=product.leedohyun.com
@@ -135,68 +78,6 @@ spring:
             - SetRequestHeader=Cookie, {request.headers.Cookie}
             - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
             - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: redmine
-            predicates:
-            - Host=redmine.leedohyun.com
-            - Host=alm.leedohyun.com
-            uri: http://redmine-01:3000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: registry
-            predicates:
-            - Host=registry.leedohyun.com
-            uri: http://registry-01:5000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: resume
-            predicates:
-            - Host=resume.leedohyun.com
-            uri: http://wordpress-02:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: router
-            predicates:
-            - Host=router.leedohyun.com
-            uri: https://leedohyun.asuscomm.com:8443
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: static
-            predicates:
-            - Host=static.leedohyun.com
-            uri: http://minio-01:9000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-
 logging:
    level:
       root: INFO
