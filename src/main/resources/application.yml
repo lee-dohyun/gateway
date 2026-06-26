@@ -4,18 +4,10 @@ spring:
    cloud:
       gateway:
          routes:
-         -  id: front
-            predicates:
-            - Host=front.leedohyun.com
-            uri: http://home.front:3000
-         -  id: customer
-            predicates:
-            - Host=customer.leedohyun.com
-            uri: http://customer.front:3000
          -  id: tool
             predicates:
             - Host=tool.leedohyun.com
-            uri: http://tool:8080
+            uri: http://tool-service:80
             filters:
             - SetRequestHeader=Host, {request.headers.Host}
             - SetRequestHeader=Origin, {request.headers.Origin}
@@ -24,15 +16,25 @@ spring:
             - SetRequestHeader=Cookie, {request.headers.Cookie}
             - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
             - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: auth
+         -  id: wordpress
             predicates:
-            - Host=auth.leedohyun.com
-            uri: http://auth.api:8080
-         -  id: image
+            - Host=leedohyun.com
+            - Host=www.leedohyun.com
+            - Host=blog.leedohyun.com
+            - Host=wordpress.leedohyun.com
+            uri: http://wordpress-service:80
+            filters:
+            - SetRequestHeader=Host, {request.headers.Host}
+            - SetRequestHeader=Origin, {request.headers.Origin}
+            - SetRequestHeader=Referer, {request.headers.Referer}
+            - SetRequestHeader=Authorization, {request.headers.Authorization}
+            - SetRequestHeader=Cookie, {request.headers.Cookie}
+            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
+            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+         -  id: minio-api
             predicates:
-            - Host=image.leedohyun.com
             - Host=static.leedohyun.com
-            uri: http://minio-01:9000
+            uri: http://minio-service:9000
             filters:
             - SetRequestHeader=Host, {request.headers.Host}
             - SetRequestHeader=Origin, {request.headers.Origin}
@@ -41,11 +43,23 @@ spring:
             - SetRequestHeader=Cookie, {request.headers.Cookie}
             - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
             - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: image-minio
+         -  id: minio-console
             predicates:
-            - Host=image-minio.leedohyun.com
-            - Host=static-minio.leedohyun.com
-            uri: http://minio-01:9001
+            - Host=minio.leedohyun.com
+            uri: http://minio-console-service:9001
+            filters:
+            - SetRequestHeader=Host, {request.headers.Host}
+            - SetRequestHeader=Origin, {request.headers.Origin}
+            - SetRequestHeader=Referer, {request.headers.Referer}
+            - SetRequestHeader=Authorization, {request.headers.Authorization}
+            - SetRequestHeader=Cookie, {request.headers.Cookie}
+            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
+            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+         -  id: redmine
+            predicates:
+            - Host=alm.leedohyun.com
+            - Host=redmine.leedohyun.com
+            uri: http://redmine-service:3000
             filters:
             - SetRequestHeader=Host, {request.headers.Host}
             - SetRequestHeader=Origin, {request.headers.Origin}
@@ -57,7 +71,7 @@ spring:
          -  id: keycloak
             predicates:
             - Host=keycloak.leedohyun.com
-            uri: http://keycloak:8080
+            uri: http://keycloak-service:80
             filters:
             - SetRequestHeader=Host, {request.headers.Host}
             - SetRequestHeader=Origin, {request.headers.Origin}
@@ -66,10 +80,10 @@ spring:
             - SetRequestHeader=Cookie, {request.headers.Cookie}
             - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
             - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
-         -  id: product
+         -  id: architecture
             predicates:
-            - Host=product.leedohyun.com
-            uri: http://front.product:3000
+            - Host=architecture.leedohyun.com
+            uri: http://architecture-service:80
             filters:
             - SetRequestHeader=Host, {request.headers.Host}
             - SetRequestHeader=Origin, {request.headers.Origin}
