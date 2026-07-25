@@ -1,0 +1,25 @@
+spring:
+   cloud:
+      gateway:
+         routes:
+         -  id: customer-auth-api
+            predicates:
+            - Host=customer.localhost
+            - Path=/api/auth/**
+            uri: http://auth-api:8080
+         -  id: customer-front
+            predicates:
+            - Host=customer.localhost
+            uri: http://customer-front:3000
+         -  id: home-front
+            predicates:
+            - Host=home.localhost
+            uri: http://home-front:3000
+         -  id: auth-api-direct
+            predicates:
+            - Host=auth.localhost
+            uri: http://auth-api:8080
+
+logging:
+   level:
+      '[com.dh.gateway.security]': DEBUG
