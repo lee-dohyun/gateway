@@ -96,6 +96,10 @@ spring:
             predicates:
             - Host=router.leedohyun.com
             uri: https://leedohyun.asuscomm.com:8443
+         httpclient:
+            ssl:
+               trustedX509Certificates:
+               - classpath:router-admin-ca.pem
 logging:
    level:
       root: INFO
