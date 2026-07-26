@@ -26,6 +26,7 @@ ext {
 dependencies {
 	implementation 'org.springframework.cloud:spring-cloud-starter-gateway'       // ✅ WebFlux 기반 Gateway
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'         // ✅ Netty 기반 웹서버
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'        // ✅ /actuator/health (liveness/readiness probe)
 	implementation 'com.nimbusds:nimbus-jose-jwt:9.37.3'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
