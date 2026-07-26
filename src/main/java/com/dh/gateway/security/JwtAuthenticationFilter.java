@@ -28,7 +28,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * customer.localhost 로 인입되는 요청 중 로그인/정적 리소스를 제외한 나머지는
- * ACCESS_TOKEN 쿠키의 JWT 서명/만료를 검증한다. auth.localhost, home.localhost 는 인증 없이 통과시킨다.
+ * ACCESS_TOKEN 쿠키의 JWT 서명/만료를 검증한다. auth.localhost, home.localhost, router.leedohyun.com 는 인증 없이 통과시킨다.
  * 검증 실패 시 개인정보가 없는 home.localhost 로 리다이렉트한다.
  */
 @Component
@@ -36,7 +36,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String ACCESS_TOKEN_COOKIE = "ACCESS_TOKEN";
-    private static final List<String> PUBLIC_HOSTS = List.of("auth.localhost", "home.localhost");
+    private static final List<String> PUBLIC_HOSTS =
+            List.of("auth.localhost", "home.localhost", "router.leedohyun.com");
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout");
     private static final List<String> PUBLIC_PATH_PREFIXES =
