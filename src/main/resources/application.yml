@@ -96,9 +96,6 @@ spring:
             predicates:
             - Host=router.leedohyun.com
             uri: https://leedohyun.asuscomm.com:8443
-            filters:
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
 logging:
    level:
       root: INFO
