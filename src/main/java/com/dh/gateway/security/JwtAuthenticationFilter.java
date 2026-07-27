@@ -1,6 +1,8 @@
 package com.dh.gateway.security;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +76,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .flatMap(claims -> {
                     ServerHttpRequest mutated = request.mutate()
                             .header("X-User-Email", safeString(claims.getClaim("email")))
-                            .header("X-User-Name", safeString(claims.getClaim("name")))
+                            .header("X-User-Name", urlEncode(safeString(claims.getClaim("name"))))
                             .build();
                     return chain.filter(exchange.mutate().request(mutated).build());
                 })
@@ -143,6 +145,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private String safeString(Object value) {
         return value == null ? "" : value.toString();
+    }
+
+    /** HTTP 헤더는 ISO-8859-1만 안전하므로, 한글 등 비-ASCII 값(name 클레임)은 URL 인코딩해서 넣는다. */
+    private String urlEncode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     @Override
