@@ -38,6 +38,8 @@ spring:
             uri: https://leedohyun.asuscomm.com:8443
             filters:
             - SetRequestHeader=Host, leedohyun.asuscomm.com
+            - SetRequestHeader=Origin, https://leedohyun.asuscomm.com:8443
+            - SetRequestHeader=Referer, https://leedohyun.asuscomm.com:8443/Main_Login.asp
          httpclient:
             ssl:
                trustedX509Certificates:
