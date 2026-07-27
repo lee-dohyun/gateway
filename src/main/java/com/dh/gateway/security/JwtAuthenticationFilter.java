@@ -63,6 +63,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String host = request.getURI().getHost();
         String path = request.getURI().getPath();
 
+        if (isOptionalAuthPath(host, path)) {
+            return attachUserHeadersIfPresent(exchange, chain);
+        }
+
         if (!requiresAuth(host, path)) {
             return chain.filter(exchange);
         }
@@ -73,17 +77,38 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         return verify(cookie.getValue())
-                .flatMap(claims -> {
-                    ServerHttpRequest mutated = request.mutate()
-                            .header("X-User-Email", safeString(claims.getClaim("email")))
-                            .header("X-User-Name", urlEncode(safeString(claims.getClaim("name"))))
-                            .build();
-                    return chain.filter(exchange.mutate().request(mutated).build());
-                })
+                .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims)).build()))
                 .onErrorResume(e -> {
                     logger.debug("JWT 검증 실패: {}", e.getMessage());
                     return redirectToHome(exchange);
                 });
+    }
+
+    /**
+     * home.leedohyun.com의 로그인 상태 조회(/api/auth/me)는 로그인을 강제하지 않는다.
+     * 쿠키가 있으면 검증해서 사용자 헤더를 주입하고, 없거나 유효하지 않으면 헤더 없이 그대로 통과시켜
+     * auth-api가 401(비로그인)을 응답하게 둔다 — home.leedohyun.com은 공개 페이지라 리다이렉트하지 않음.
+     */
+    private boolean isOptionalAuthPath(String host, String path) {
+        return "home.leedohyun.com".equals(host) && "/api/auth/me".equals(path);
+    }
+
+    private Mono<Void> attachUserHeadersIfPresent(ServerWebExchange exchange, GatewayFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+        HttpCookie cookie = request.getCookies().getFirst(ACCESS_TOKEN_COOKIE);
+        if (cookie == null) {
+            return chain.filter(exchange);
+        }
+        return verify(cookie.getValue())
+                .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims)).build()))
+                .onErrorResume(e -> chain.filter(exchange));
+    }
+
+    private ServerHttpRequest withUserHeaders(ServerHttpRequest request, JWTClaimsSet claims) {
+        return request.mutate()
+                .header("X-User-Email", safeString(claims.getClaim("email")))
+                .header("X-User-Name", urlEncode(safeString(claims.getClaim("name"))))
+                .build();
     }
 
     private boolean requiresAuth(String host, String path) {

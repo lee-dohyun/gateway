@@ -43,6 +43,11 @@ spring:
             predicates:
             - Host=customer.leedohyun.com
             uri: http://customer-front.customer.svc.cluster.local:3000
+         -  id: auth-api-home
+            predicates:
+            - Host=home.leedohyun.com
+            - Path=/api/auth/**
+            uri: http://auth-api.customer.svc.cluster.local:8080
          -  id: home-front
             predicates:
             - Host=home.leedohyun.com
