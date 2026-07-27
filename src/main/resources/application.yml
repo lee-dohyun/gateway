@@ -36,6 +36,8 @@ spring:
             predicates:
             - Host=router.leedohyun.com
             uri: https://leedohyun.asuscomm.com:8443
+            filters:
+            - SetRequestHeader=Host, leedohyun.asuscomm.com
          httpclient:
             ssl:
                trustedX509Certificates:
