@@ -31,7 +31,7 @@ spring:
          -  id: architecture
             predicates:
             - Host=architecture.leedohyun.com
-            uri: http://architecture-web.default.svc.cluster.local:80
+            uri: http://architecture-web-service.default.svc.cluster.local:80
          -  id: router-admin
             predicates:
             - Host=router.leedohyun.com
