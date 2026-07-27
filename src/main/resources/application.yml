@@ -10,9 +10,15 @@ spring:
             predicates:
             - Host=tool.leedohyun.com
             uri: http://tool-service.tool.svc.cluster.local:80
+         -  id: root-redirect
+            predicates:
+            - Host=leedohyun.com,www.leedohyun.com
+            filters:
+            - RedirectTo=302, https://home.leedohyun.com
+            uri: no://op
          -  id: wordpress
             predicates:
-            - Host=leedohyun.com,www.leedohyun.com,blog.leedohyun.com,wordpress.leedohyun.com
+            - Host=blog.leedohyun.com,wordpress.leedohyun.com
             uri: http://wordpress-service:80
          -  id: minio-api
             predicates:
