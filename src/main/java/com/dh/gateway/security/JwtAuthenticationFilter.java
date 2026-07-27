@@ -46,7 +46,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout");
     private static final List<String> PUBLIC_PATH_PREFIXES =
-            List.of("/login", "/_next/", "/favicon.ico");
+            List.of("/login", "/signup", "/_next/", "/favicon.ico");
 
     private final WebClient keycloakClient;
     private final Map<String, RSAKey> keyCache = new ConcurrentHashMap<>();
