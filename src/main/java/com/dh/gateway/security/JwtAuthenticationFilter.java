@@ -29,26 +29,30 @@ import reactor.core.publisher.Mono;
 /**
  * 게이트웨이는 leedohyun.com의 대부분 도메인(wordpress, tool, keycloak, minio, redmine,
  * architecture 등)을 프록시하는 공용 진입점이라 기본적으로 모든 요청을 통과시킨다.
- * PROTECTED_HOSTS 로 명시된 호스트(customer.localhost 로 인입되는 로그인/정적 리소스 제외한
- * 요청)만 ACCESS_TOKEN 쿠키의 JWT 서명/만료를 검증한다.
- * 검증 실패 시 개인정보가 없는 home.localhost 로 리다이렉트한다.
+ * PROTECTED_HOSTS 로 명시된 호스트(customer.leedohyun.com 로 인입되는 로그인/정적 리소스 제외한
+ * 요청)만 ACCESS_TOKEN 쿠키의 JWT를 Keycloak(customer realm)의 공개키로 검증한다.
+ * 검증 성공 시 토큰의 email/name 클레임을 X-User-Email/X-User-Name 헤더로 주입한다.
+ * 검증 실패 시 home.leedohyun.com 으로 리다이렉트한다.
  */
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String ACCESS_TOKEN_COOKIE = "ACCESS_TOKEN";
-    private static final List<String> PROTECTED_HOSTS = List.of("customer.localhost");
+    private static final String EXPECTED_ISSUER = "https://keycloak.leedohyun.com/realms/customer";
+    private static final List<String> PROTECTED_HOSTS = List.of("customer.leedohyun.com");
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout");
     private static final List<String> PUBLIC_PATH_PREFIXES =
             List.of("/login", "/_next/", "/favicon.ico");
 
-    private final WebClient authApiClient;
+    private final WebClient keycloakClient;
     private final Map<String, RSAKey> keyCache = new ConcurrentHashMap<>();
 
     public JwtAuthenticationFilter(WebClient.Builder builder) {
-        this.authApiClient = builder.baseUrl("http://auth-api:8080").build();
+        this.keycloakClient = builder
+                .baseUrl("http://keycloak-service.keycloak.svc.cluster.local/realms/customer")
+                .build();
     }
 
     @Override
@@ -69,8 +73,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return verify(cookie.getValue())
                 .flatMap(claims -> {
                     ServerHttpRequest mutated = request.mutate()
-                            .header("X-User-Id", safeString(claims.getSubject()))
-                            .header("X-User-Role", safeString(claims.getClaim("role")))
+                            .header("X-User-Email", safeString(claims.getClaim("email")))
+                            .header("X-User-Name", safeString(claims.getClaim("name")))
                             .build();
                     return chain.filter(exchange.mutate().request(mutated).build());
                 })
@@ -103,6 +107,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                                     || claims.getExpirationTime().before(new java.util.Date())) {
                                 throw new IllegalStateException("토큰 만료");
                             }
+                            if (!EXPECTED_ISSUER.equals(claims.getIssuer())) {
+                                throw new IllegalStateException("알 수 없는 issuer: " + claims.getIssuer());
+                            }
                             return claims;
                         })));
     }
@@ -112,8 +119,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         if (cached != null) {
             return Mono.just(cached);
         }
-        return authApiClient.get()
-                .uri("/.well-known/jwks.json")
+        return keycloakClient.get()
+                .uri("/protocol/openid-connect/certs")
                 .retrieve()
                 .bodyToMono(String.class)
                 .timeout(Duration.ofSeconds(3))
@@ -130,7 +137,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private Mono<Void> redirectToHome(ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.FOUND);
-        exchange.getResponse().getHeaders().setLocation(URI.create("http://home.localhost:8080/"));
+        exchange.getResponse().getHeaders().setLocation(URI.create("https://home.leedohyun.com/"));
         return exchange.getResponse().setComplete();
     }
 
