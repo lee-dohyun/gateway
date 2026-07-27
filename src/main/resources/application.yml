@@ -10,10 +10,7 @@ spring:
             uri: http://tool-service.tool.svc.cluster.local:80
          -  id: wordpress
             predicates:
-            - Host=leedohyun.com
-            - Host=www.leedohyun.com
-            - Host=blog.leedohyun.com
-            - Host=wordpress.leedohyun.com
+            - Host=leedohyun.com,www.leedohyun.com,blog.leedohyun.com,wordpress.leedohyun.com
             uri: http://wordpress-service:80
          -  id: minio-api
             predicates:
@@ -25,8 +22,7 @@ spring:
             uri: http://minio-console.minio.svc.cluster.local:9001
          -  id: redmine
             predicates:
-            - Host=alm.leedohyun.com
-            - Host=redmine.leedohyun.com
+            - Host=alm.leedohyun.com,redmine.leedohyun.com
             uri: http://redmine-service.redmine.svc.cluster.local:3000
          -  id: keycloak
             predicates:
@@ -35,7 +31,7 @@ spring:
          -  id: architecture
             predicates:
             - Host=architecture.leedohyun.com
-            uri: http://architecture-web-service.default.svc.cluster.local:80
+            uri: http://architecture-web.default.svc.cluster.local:80
          -  id: router-admin
             predicates:
             - Host=router.leedohyun.com
