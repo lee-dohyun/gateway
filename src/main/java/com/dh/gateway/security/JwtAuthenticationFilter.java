@@ -27,8 +27,10 @@ import com.nimbusds.jwt.SignedJWT;
 import reactor.core.publisher.Mono;
 
 /**
- * customer.localhost 로 인입되는 요청 중 로그인/정적 리소스를 제외한 나머지는
- * ACCESS_TOKEN 쿠키의 JWT 서명/만료를 검증한다. auth.localhost, home.localhost, router.leedohyun.com 는 인증 없이 통과시킨다.
+ * 게이트웨이는 leedohyun.com의 대부분 도메인(wordpress, tool, keycloak, minio, redmine,
+ * architecture 등)을 프록시하는 공용 진입점이라 기본적으로 모든 요청을 통과시킨다.
+ * PROTECTED_HOSTS 로 명시된 호스트(customer.localhost 로 인입되는 로그인/정적 리소스 제외한
+ * 요청)만 ACCESS_TOKEN 쿠키의 JWT 서명/만료를 검증한다.
  * 검증 실패 시 개인정보가 없는 home.localhost 로 리다이렉트한다.
  */
 @Component
@@ -36,8 +38,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String ACCESS_TOKEN_COOKIE = "ACCESS_TOKEN";
-    private static final List<String> PUBLIC_HOSTS =
-            List.of("auth.localhost", "home.localhost", "router.leedohyun.com");
+    private static final List<String> PROTECTED_HOSTS = List.of("customer.localhost");
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout");
     private static final List<String> PUBLIC_PATH_PREFIXES =
@@ -56,7 +57,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String host = request.getURI().getHost();
         String path = request.getURI().getPath();
 
-        if (isPublic(host, path)) {
+        if (!requiresAuth(host, path)) {
             return chain.filter(exchange);
         }
 
@@ -79,14 +80,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 });
     }
 
-    private boolean isPublic(String host, String path) {
-        if (host != null && PUBLIC_HOSTS.contains(host)) {
-            return true;
+    private boolean requiresAuth(String host, String path) {
+        if (host == null || !PROTECTED_HOSTS.contains(host)) {
+            return false;
         }
         if (PUBLIC_EXACT_PATHS.contains(path)) {
-            return true;
+            return false;
         }
-        return PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
+        return PUBLIC_PATH_PREFIXES.stream().noneMatch(path::startsWith);
     }
 
     private Mono<JWTClaimsSet> verify(String token) {

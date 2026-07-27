@@ -7,15 +7,7 @@ spring:
          -  id: tool
             predicates:
             - Host=tool.leedohyun.com
-            uri: http://tool-service:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+            uri: http://tool-service.tool.svc.cluster.local:80
          -  id: wordpress
             predicates:
             - Host=leedohyun.com
@@ -23,75 +15,27 @@ spring:
             - Host=blog.leedohyun.com
             - Host=wordpress.leedohyun.com
             uri: http://wordpress-service:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
          -  id: minio-api
             predicates:
             - Host=static.leedohyun.com
-            uri: http://minio-service:9000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+            uri: http://minio.minio.svc.cluster.local:9000
          -  id: minio-console
             predicates:
             - Host=minio.leedohyun.com
-            uri: http://minio-console-service:9001
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+            uri: http://minio-console.minio.svc.cluster.local:9001
          -  id: redmine
             predicates:
             - Host=alm.leedohyun.com
             - Host=redmine.leedohyun.com
-            uri: http://redmine-service:3000
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+            uri: http://redmine-service.redmine.svc.cluster.local:3000
          -  id: keycloak
             predicates:
             - Host=keycloak.leedohyun.com
-            uri: http://keycloak-service:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+            uri: http://keycloak-service.keycloak.svc.cluster.local:80
          -  id: architecture
             predicates:
             - Host=architecture.leedohyun.com
-            uri: http://architecture-service:80
-            filters:
-            - SetRequestHeader=Host, {request.headers.Host}
-            - SetRequestHeader=Origin, {request.headers.Origin}
-            - SetRequestHeader=Referer, {request.headers.Referer}
-            - SetRequestHeader=Authorization, {request.headers.Authorization}
-            - SetRequestHeader=Cookie, {request.headers.Cookie}
-            - SetRequestHeader=X-Forwarded-For, {request.headers.X-Forwarded-For}
-            - SetRequestHeader=X-Real-IP, {request.headers.X-Real-IP}
+            uri: http://architecture-web-service.default.svc.cluster.local:80
          -  id: router-admin
             predicates:
             - Host=router.leedohyun.com
