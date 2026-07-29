@@ -58,6 +58,10 @@ spring:
             predicates:
             - Host=home.leedohyun.com
             uri: http://home-front.customer.svc.cluster.local:3000
+         -  id: monitoring
+            predicates:
+            - Host=monitoring.leedohyun.com
+            uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
          -  id: router-admin
             predicates:
             - Host=router.leedohyun.com
