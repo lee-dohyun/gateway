@@ -58,6 +58,15 @@ spring:
             predicates:
             - Host=home.leedohyun.com
             uri: http://home-front.customer.svc.cluster.local:3000
+         -  id: product-api
+            predicates:
+            - Host=product.leedohyun.com
+            - Path=/api/products/**,/api/categories/**
+            uri: http://product-api.customer.svc.cluster.local:8080
+         -  id: product-front
+            predicates:
+            - Host=product.leedohyun.com
+            uri: http://product-front.customer.svc.cluster.local:3000
          -  id: monitoring
             predicates:
             - Host=monitoring.leedohyun.com
