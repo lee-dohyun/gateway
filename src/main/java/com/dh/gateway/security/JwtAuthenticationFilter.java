@@ -35,6 +35,8 @@ import reactor.core.publisher.Mono;
  * 요청)만 ACCESS_TOKEN 쿠키의 JWT를 Keycloak(customer realm)의 공개키로 검증한다.
  * 검증 성공 시 토큰의 email/name 클레임을 X-User-Email/X-User-Name 헤더로 주입한다.
  * 검증 실패 시 home.leedohyun.com 으로 리다이렉트한다.
+ * OPTIONAL_AUTH_HOSTS(product.leedohyun.com)는 로그인을 강제하지 않되, 쿠키가 있으면 검증해서
+ * 헤더를 주입한다 — 비로그인 사용자도 상품/장바구니는 그대로 쓰되, 로그인된 경우에만 주문에 계정을 연결하기 위함.
  */
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
@@ -43,6 +45,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final String ACCESS_TOKEN_COOKIE = "ACCESS_TOKEN";
     private static final String EXPECTED_ISSUER = "https://keycloak.leedohyun.com/realms/customer";
     private static final List<String> PROTECTED_HOSTS = List.of("customer.leedohyun.com");
+    private static final List<String> OPTIONAL_AUTH_HOSTS = List.of("product.leedohyun.com");
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout");
     private static final List<String> PUBLIC_PATH_PREFIXES =
@@ -63,7 +66,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String host = request.getURI().getHost();
         String path = request.getURI().getPath();
 
-        if (isOptionalAuthPath(host, path)) {
+        if (isOptionalAuthPath(host, path) || OPTIONAL_AUTH_HOSTS.contains(host)) {
             return attachUserHeadersIfPresent(exchange, chain);
         }
 
