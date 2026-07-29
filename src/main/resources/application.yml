@@ -63,6 +63,11 @@ spring:
             - Host=product.leedohyun.com
             - Path=/api/products/**,/api/categories/**,/api/cart/**
             uri: http://product-api.customer.svc.cluster.local:8080
+         -  id: order-api
+            predicates:
+            - Host=product.leedohyun.com
+            - Path=/api/orders/**
+            uri: http://order-api.customer.svc.cluster.local:8080
          -  id: product-front
             predicates:
             - Host=product.leedohyun.com
