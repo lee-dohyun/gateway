@@ -77,6 +77,10 @@ spring:
             predicates:
             - Host=product.leedohyun.com
             uri: http://product-front.customer.svc.cluster.local:3000
+         -  id: admin-front
+            predicates:
+            - Host=admin.leedohyun.com
+            uri: http://admin-front.customer.svc.cluster.local:3000
          -  id: monitoring
             predicates:
             - Host=monitoring.leedohyun.com
