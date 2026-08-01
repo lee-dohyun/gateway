@@ -48,7 +48,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> OPTIONAL_AUTH_HOSTS = List.of("product.leedohyun.com");
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout",
-                    "/api/auth/verify-email", "/api/auth/resend-verification");
+                    "/api/auth/verify-email", "/api/auth/resend-verification",
+                    "/verify");
     private static final List<String> PUBLIC_PATH_PREFIXES =
             List.of("/login", "/signup", "/_next/", "/favicon.ico");
 
