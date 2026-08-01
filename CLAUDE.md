@@ -83,3 +83,15 @@ protected backend route requires two edits: the route itself in the appropriate 
 if it should be public, an entry in `PUBLIC_HOSTS`/`PUBLIC_EXACT_PATHS`/`PUBLIC_PATH_PREFIXES` in
 `JwtAuthenticationFilter`. There is no per-route auth annotation or config — the bypass/enforcement logic
 is one hardcoded list read on every request.
+
+**This is a recurring bug source because the filter lives in this repo but the pages/routes that need
+whitelisting are defined in other repos** (`auth.api`, `customer.front`, ...). A change made entirely
+inside another repo can silently break in production because nobody edited this file. Concrete incident
+(2026-08-02): `customer.front`'s email-verification link (`https://customer.leedohyun.com/verify`) was
+added, and the *API* path `/api/auth/verify-email` was correctly whitelisted at the time — but the
+*frontend page* path `/verify` itself was not, since `customer.leedohyun.com` is a `PROTECTED_HOSTS`
+entry. Unauthenticated visitors (anyone clicking the email link before their first login) were silently
+302-redirected to `home.leedohyun.com` with no error. Fixed by adding `/verify` to `PUBLIC_EXACT_PATHS`
+(commit `0565a01`). **Whenever `customer.front` (or any future frontend under a `PROTECTED_HOSTS` domain)
+adds a new page meant to be reachable before login, this file's `PUBLIC_EXACT_PATHS`/`PUBLIC_PATH_PREFIXES`
+must be checked/updated too — both the page route AND any API route it calls.**
