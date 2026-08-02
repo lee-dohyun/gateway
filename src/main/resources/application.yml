@@ -1,5 +1,13 @@
 server:
    forward-headers-strategy: framework
+gateway:
+   security:
+      keycloak-issuer: ${SHOP_KEYCLOAK_ISSUER:https://keycloak.posselect.com/realms/customer}
+      keycloak-realm-url: ${SHOP_KEYCLOAK_REALM_URL:http://keycloak-service.keycloak.svc.cluster.local/realms/customer}
+      protected-hosts: ${SHOP_PROTECTED_HOSTS:customer.posselect.com}
+      optional-auth-hosts: ${SHOP_OPTIONAL_AUTH_HOSTS:product.posselect.com}
+      home-host: ${SHOP_HOME_HOST:home.posselect.com}
+      redirect-url: ${SHOP_REDIRECT_URL:https://home.posselect.com/}
 spring:
    application:
       name: gateway
@@ -14,7 +22,37 @@ spring:
             predicates:
             - Host=leedohyun.com,www.leedohyun.com
             filters:
-            - RedirectTo=302, https://home.leedohyun.com
+            - RedirectTo=302, https://blog.leedohyun.com
+            uri: no://op
+         -  id: shop-customer-redirect
+            predicates:
+            - Host=customer.leedohyun.com
+            filters:
+            - RedirectTo=302, https://customer.posselect.com
+            uri: no://op
+         -  id: shop-home-redirect
+            predicates:
+            - Host=home.leedohyun.com
+            filters:
+            - RedirectTo=302, https://home.posselect.com
+            uri: no://op
+         -  id: shop-product-redirect
+            predicates:
+            - Host=product.leedohyun.com
+            filters:
+            - RedirectTo=302, https://product.posselect.com
+            uri: no://op
+         -  id: shop-admin-redirect
+            predicates:
+            - Host=admin.leedohyun.com
+            filters:
+            - RedirectTo=302, https://admin.posselect.com
+            uri: no://op
+         -  id: shop-keycloak-redirect
+            predicates:
+            - Host=keycloak.leedohyun.com
+            filters:
+            - RedirectTo=302, https://keycloak.posselect.com
             uri: no://op
          -  id: wordpress
             predicates:
@@ -34,7 +72,7 @@ spring:
             uri: http://redmine-service.redmine.svc.cluster.local:3000
          -  id: keycloak
             predicates:
-            - Host=keycloak.leedohyun.com
+            - Host=keycloak.posselect.com
             uri: http://keycloak-service.keycloak.svc.cluster.local:80
          -  id: architecture
             predicates:
@@ -42,44 +80,44 @@ spring:
             uri: http://architecture-web-service.default.svc.cluster.local:80
          -  id: auth-api
             predicates:
-            - Host=customer.leedohyun.com
+            - Host=customer.posselect.com
             - Path=/api/auth/**
             uri: http://auth-api.customer.svc.cluster.local:8080
          -  id: order-api-customer
             predicates:
-            - Host=customer.leedohyun.com
+            - Host=customer.posselect.com
             - Path=/api/orders/**
             uri: http://order-api.customer.svc.cluster.local:8080
          -  id: customer-front
             predicates:
-            - Host=customer.leedohyun.com
+            - Host=customer.posselect.com
             uri: http://customer-front.customer.svc.cluster.local:3000
          -  id: auth-api-home
             predicates:
-            - Host=home.leedohyun.com
+            - Host=home.posselect.com
             - Path=/api/auth/**
             uri: http://auth-api.customer.svc.cluster.local:8080
          -  id: home-front
             predicates:
-            - Host=home.leedohyun.com
+            - Host=home.posselect.com
             uri: http://home-front.customer.svc.cluster.local:3000
          -  id: product-api
             predicates:
-            - Host=product.leedohyun.com
+            - Host=product.posselect.com
             - Path=/api/products/**,/api/categories/**,/api/cart/**
             uri: http://product-api.customer.svc.cluster.local:8080
          -  id: order-api
             predicates:
-            - Host=product.leedohyun.com
+            - Host=product.posselect.com
             - Path=/api/orders/**
             uri: http://order-api.customer.svc.cluster.local:8080
          -  id: product-front
             predicates:
-            - Host=product.leedohyun.com
+            - Host=product.posselect.com
             uri: http://product-front.customer.svc.cluster.local:3000
          -  id: admin-front
             predicates:
-            - Host=admin.leedohyun.com
+            - Host=admin.posselect.com
             uri: http://admin-front.customer.svc.cluster.local:3000
          -  id: monitoring
             predicates:

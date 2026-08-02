@@ -29,23 +29,26 @@ import com.nimbusds.jwt.SignedJWT;
 import reactor.core.publisher.Mono;
 
 /**
- * 게이트웨이는 leedohyun.com의 대부분 도메인(wordpress, tool, keycloak, minio, redmine,
- * architecture 등)을 프록시하는 공용 진입점이라 기본적으로 모든 요청을 통과시킨다.
- * PROTECTED_HOSTS 로 명시된 호스트(customer.leedohyun.com 로 인입되는 로그인/정적 리소스 제외한
- * 요청)만 ACCESS_TOKEN 쿠키의 JWT를 Keycloak(customer realm)의 공개키로 검증한다.
+ * 게이트웨이는 여러 도메인(wordpress, tool, keycloak, minio, redmine, architecture,
+ * 쇼핑몰 프론트 등)을 프록시하는 공용 진입점이라 기본적으로 모든 요청을 통과시킨다.
+ * {@link GatewaySecurityProperties#getProtectedHosts()}에 명시된 호스트(로그인/정적 리소스
+ * 제외한 요청)만 ACCESS_TOKEN 쿠키의 JWT를 Keycloak(customer realm)의 공개키로 검증한다.
  * 검증 성공 시 토큰의 email/name 클레임을 X-User-Email/X-User-Name 헤더로 주입한다.
- * 검증 실패 시 home.leedohyun.com 으로 리다이렉트한다.
- * OPTIONAL_AUTH_HOSTS(product.leedohyun.com)는 로그인을 강제하지 않되, 쿠키가 있으면 검증해서
- * 헤더를 주입한다 — 비로그인 사용자도 상품/장바구니는 그대로 쓰되, 로그인된 경우에만 주문에 계정을 연결하기 위함.
+ * 검증 실패 시 {@link GatewaySecurityProperties#getRedirectUrl()}로 리다이렉트한다.
+ * {@link GatewaySecurityProperties#getOptionalAuthHosts()}는 로그인을 강제하지 않되, 쿠키가
+ * 있으면 검증해서 헤더를 주입한다 — 비로그인 사용자도 상품/장바구니는 그대로 쓰되, 로그인된 경우에만
+ * 주문에 계정을 연결하기 위함.
+ *
+ * 호스트/issuer 값은 전부 {@link GatewaySecurityProperties}(application*.yml의
+ * gateway.security.*)에서 온다 — 쇼핑몰이 다른 도메인으로 옮기거나 보호 대상 도메인이 늘어나도
+ * 이 클래스는 건드릴 필요 없이 설정만 바꾸면 된다.
  */
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String ACCESS_TOKEN_COOKIE = "ACCESS_TOKEN";
-    private static final String EXPECTED_ISSUER = "https://keycloak.leedohyun.com/realms/customer";
-    private static final List<String> PROTECTED_HOSTS = List.of("customer.leedohyun.com");
-    private static final List<String> OPTIONAL_AUTH_HOSTS = List.of("product.leedohyun.com");
+    private static final String HOME_AUTH_ME_PATH = "/api/auth/me";
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout",
                     "/api/auth/verify-email", "/api/auth/resend-verification",
@@ -53,12 +56,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATH_PREFIXES =
             List.of("/login", "/signup", "/_next/", "/favicon.ico");
 
+    private final GatewaySecurityProperties properties;
     private final WebClient keycloakClient;
     private final Map<String, RSAKey> keyCache = new ConcurrentHashMap<>();
 
-    public JwtAuthenticationFilter(WebClient.Builder builder) {
+    public JwtAuthenticationFilter(WebClient.Builder builder, GatewaySecurityProperties properties) {
+        this.properties = properties;
         this.keycloakClient = builder
-                .baseUrl("http://keycloak-service.keycloak.svc.cluster.local/realms/customer")
+                .baseUrl(properties.getKeycloakRealmUrl())
                 .build();
     }
 
@@ -68,7 +73,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String host = request.getURI().getHost();
         String path = request.getURI().getPath();
 
-        if (isOptionalAuthPath(host, path) || OPTIONAL_AUTH_HOSTS.contains(host)) {
+        if (isOptionalAuthPath(host, path) || properties.getOptionalAuthHosts().contains(host)) {
             return attachUserHeadersIfPresent(exchange, chain);
         }
 
@@ -90,12 +95,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     /**
-     * home.leedohyun.com의 로그인 상태 조회(/api/auth/me)는 로그인을 강제하지 않는다.
+     * 홈 랜딩 호스트의 로그인 상태 조회(/api/auth/me)는 로그인을 강제하지 않는다.
      * 쿠키가 있으면 검증해서 사용자 헤더를 주입하고, 없거나 유효하지 않으면 헤더 없이 그대로 통과시켜
-     * auth-api가 401(비로그인)을 응답하게 둔다 — home.leedohyun.com은 공개 페이지라 리다이렉트하지 않음.
+     * auth-api가 401(비로그인)을 응답하게 둔다 — 홈은 공개 페이지라 리다이렉트하지 않음.
      */
     private boolean isOptionalAuthPath(String host, String path) {
-        return "home.leedohyun.com".equals(host) && "/api/auth/me".equals(path);
+        return properties.getHomeHost().equals(host) && HOME_AUTH_ME_PATH.equals(path);
     }
 
     private Mono<Void> attachUserHeadersIfPresent(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -117,7 +122,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private boolean requiresAuth(String host, String path) {
-        if (host == null || !PROTECTED_HOSTS.contains(host)) {
+        if (host == null || !properties.getProtectedHosts().contains(host)) {
             return false;
         }
         if (PUBLIC_EXACT_PATHS.contains(path)) {
@@ -139,7 +144,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                                     || claims.getExpirationTime().before(new java.util.Date())) {
                                 throw new IllegalStateException("토큰 만료");
                             }
-                            if (!EXPECTED_ISSUER.equals(claims.getIssuer())) {
+                            if (!properties.getKeycloakIssuer().equals(claims.getIssuer())) {
                                 throw new IllegalStateException("알 수 없는 issuer: " + claims.getIssuer());
                             }
                             return claims;
@@ -169,7 +174,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private Mono<Void> redirectToHome(ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.FOUND);
-        exchange.getResponse().getHeaders().setLocation(URI.create("https://home.leedohyun.com/"));
+        exchange.getResponse().getHeaders().setLocation(URI.create(properties.getRedirectUrl()));
         return exchange.getResponse().setComplete();
     }
 

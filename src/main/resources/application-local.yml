@@ -1,3 +1,11 @@
+gateway:
+   security:
+      keycloak-issuer: https://keycloak.localhost/realms/customer
+      keycloak-realm-url: http://keycloak:8080/realms/customer
+      protected-hosts: customer.localhost
+      optional-auth-hosts: product.localhost
+      home-host: home.localhost
+      redirect-url: http://home.localhost:8080/
 spring:
    cloud:
       gateway:
