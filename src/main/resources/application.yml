@@ -83,7 +83,7 @@ spring:
          -  id: shop-static-assets
             predicates:
             - Host=static.posselect.com
-            uri: http://minio-service.minio.svc.cluster.local:9000
+            uri: http://minio.minio.svc.cluster.local:9000
          -  id: shop-image-proxy
             predicates:
             - Host=image.posselect.com
