@@ -24,6 +24,12 @@ spring:
             filters:
             - RedirectTo=302, https://blog.leedohyun.com
             uri: no://op
+         -  id: shop-root-redirect
+            predicates:
+            - Host=posselect.com,www.posselect.com
+            filters:
+            - RedirectTo=302, https://home.posselect.com
+            uri: no://op
          -  id: shop-customer-redirect
             predicates:
             - Host=customer.leedohyun.com
