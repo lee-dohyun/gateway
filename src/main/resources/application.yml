@@ -80,6 +80,14 @@ spring:
             predicates:
             - Host=minio.leedohyun.com
             uri: http://minio-console.minio.svc.cluster.local:9001
+         -  id: shop-static-assets
+            predicates:
+            - Host=static.posselect.com
+            uri: http://minio-service.minio.svc.cluster.local:9000
+         -  id: shop-image-proxy
+            predicates:
+            - Host=image.posselect.com
+            uri: http://imgproxy-service.minio.svc.cluster.local:8080
          -  id: redmine
             predicates:
             - Host=alm.leedohyun.com,redmine.leedohyun.com
