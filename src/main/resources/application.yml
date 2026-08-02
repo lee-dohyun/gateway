@@ -1,5 +1,13 @@
 server:
    forward-headers-strategy: framework
+management:
+   endpoints:
+      web:
+         exposure:
+            include: health,prometheus
+   metrics:
+      tags:
+         application: ${spring.application.name}
 gateway:
    security:
       keycloak-issuer: ${SHOP_KEYCLOAK_ISSUER:https://keycloak.posselect.com/realms/customer}
@@ -125,9 +133,15 @@ spring:
             predicates:
             - Host=admin.posselect.com
             uri: http://admin-front.customer.svc.cluster.local:3000
-         -  id: monitoring
+         -  id: monitoring-redirect
             predicates:
             - Host=monitoring.leedohyun.com
+            filters:
+            - RedirectTo=302, https://monitoring.posselect.com
+            uri: no://op
+         -  id: monitoring
+            predicates:
+            - Host=monitoring.posselect.com
             uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
          -  id: router-admin
             predicates:
