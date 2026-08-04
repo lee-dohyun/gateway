@@ -54,7 +54,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     "/api/auth/verify-email", "/api/auth/resend-verification",
                     "/verify");
     private static final List<String> PUBLIC_PATH_PREFIXES =
-            List.of("/login", "/signup", "/_next/", "/favicon.ico");
+            // /icon.svg: Next.js App Router의 파일 기반 favicon 라우트(app/icon.svg) — 로그인 전
+            // 페이지(/login 등)도 <link rel="icon">으로 이걸 참조하는데 빠져 있어서 비로그인 사용자는
+            // 파비콘 요청 자체가 홈으로 리다이렉트되어 파비콘이 안 뜨는 문제가 있었음.
+            List.of("/login", "/signup", "/_next/", "/favicon.ico", "/icon.svg");
 
     private final GatewaySecurityProperties properties;
     private final WebClient keycloakClient;
