@@ -151,6 +151,8 @@ spring:
             predicates:
             - Host=monitoring.posselect.com
             uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
+            filters:
+            - PreserveHostHeader
          -  id: posselect-ui
             predicates:
             - Host=ui.posselect.com
