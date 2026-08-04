@@ -95,12 +95,18 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     /**
-     * 홈 랜딩 호스트의 로그인 상태 조회(/api/auth/me)는 로그인을 강제하지 않는다.
+     * 로그인 상태 조회(/api/auth/me)는 어느 호스트에서 호출되든 로그인을 강제하지 않는다.
      * 쿠키가 있으면 검증해서 사용자 헤더를 주입하고, 없거나 유효하지 않으면 헤더 없이 그대로 통과시켜
-     * auth-api가 401(비로그인)을 응답하게 둔다 — 홈은 공개 페이지라 리다이렉트하지 않음.
+     * auth-api가 401(비로그인)을 응답하게 둔다. customer.posselect.com은 protected-hosts라 기본은
+     * 강제 로그인이지만, 공유 Header 컴포넌트가 로그인 여부를 확인하려고 모든 페이지(로그인 전 상태의
+     * /login, /signup 포함)에서 이 경로를 호출하므로 이 경로만 예외로 둔다 — 다른 경로(마이페이지 등)의
+     * 보호는 그대로 유지된다.
      */
     private boolean isOptionalAuthPath(String host, String path) {
-        return properties.getHomeHost().equals(host) && HOME_AUTH_ME_PATH.equals(path);
+        if (!HOME_AUTH_ME_PATH.equals(path)) {
+            return false;
+        }
+        return properties.getHomeHost().equals(host) || properties.getProtectedHosts().contains(host);
     }
 
     private Mono<Void> attachUserHeadersIfPresent(ServerWebExchange exchange, GatewayFilterChain chain) {

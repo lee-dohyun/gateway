@@ -155,6 +155,10 @@ spring:
             predicates:
             - Host=ui.posselect.com
             uri: http://posselect-ui-service.default.svc.cluster.local:80
+         -  id: posselect-shell
+            predicates:
+            - Host=shell.posselect.com
+            uri: http://posselect-shell-service.default.svc.cluster.local:80
          -  id: router-admin
             predicates:
             - Host=router.leedohyun.com
