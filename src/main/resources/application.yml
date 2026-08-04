@@ -151,6 +151,10 @@ spring:
             predicates:
             - Host=monitoring.posselect.com
             uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
+         -  id: posselect-ui
+            predicates:
+            - Host=ui.posselect.com
+            uri: http://posselect-ui-service.default.svc.cluster.local:80
          -  id: router-admin
             predicates:
             - Host=router.leedohyun.com
