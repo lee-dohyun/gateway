@@ -98,7 +98,7 @@ spring:
             uri: http://keycloak-service.keycloak.svc.cluster.local:80
          -  id: architecture
             predicates:
-            - Host=architecture.leedohyun.com
+            - Host=architecture.leedohyun.com,architecture.posselect.com
             uri: http://architecture-web-service.default.svc.cluster.local:80
          -  id: auth-api
             predicates:
