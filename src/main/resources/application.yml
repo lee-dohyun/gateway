@@ -87,6 +87,11 @@ spring:
             predicates:
             - Host=static.posselect.com
             uri: http://minio.minio.svc.cluster.local:9000
+         -  id: cdn-alias
+            predicates:
+            - Host=image.posselect.com
+            - Path=/cdn/**
+            uri: http://cdn-alias-service.minio.svc.cluster.local:80
          -  id: shop-image-proxy
             predicates:
             - Host=image.posselect.com
