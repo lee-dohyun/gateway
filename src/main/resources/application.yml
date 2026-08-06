@@ -78,9 +78,10 @@ spring:
             uri: http://minio.minio.svc.cluster.local:9000
          -  id: minio-console
             predicates:
-            - Host=minio.leedohyun.com
+            - Host=minio.leedohyun.com,minio.posselect.com
             filters:
             - SetRequestHeader=Host, minio.leedohyun.com
+            - RemoveRequestHeader=Origin
             uri: http://minio-console.minio.svc.cluster.local:9001
          -  id: shop-static-assets
             predicates:
