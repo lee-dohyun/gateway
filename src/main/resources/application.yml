@@ -30,7 +30,7 @@ spring:
             predicates:
             - Host=leedohyun.com,www.leedohyun.com
             filters:
-            - RedirectTo=302, https://blog.leedohyun.com
+            - RedirectTo=302, https://architecture.leedohyun.com
             uri: no://op
          -  id: shop-root-redirect
             predicates:
