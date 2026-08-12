@@ -49,6 +49,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String ACCESS_TOKEN_COOKIE = "ACCESS_TOKEN";
     private static final String HOME_AUTH_ME_PATH = "/api/auth/me";
+    /**
+     * 백엔드(auth.api 등)가 신원 증명으로 신뢰하는 헤더들. 클라이언트가 이 이름 그대로 헤더를 실어
+     * 보내면 JWT 검증 없이 신원을 위조할 수 있으므로, 아래 어떤 분기를 타든(공개 경로 통과, optional-auth
+     * 미인증 통과, JWT 검증 성공) 항상 먼저 제거한 뒤에만 라우팅한다. 검증 성공 시에만 이 이름으로 새로
+     * 다시 채워 넣는다.
+     */
+    private static final List<String> USER_IDENTITY_HEADERS =
+            List.of("X-User-Id", "X-User-Email", "X-User-Role", "X-User-Name");
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout",
                     "/api/auth/verify-email", "/api/auth/resend-verification",
@@ -78,7 +86,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+    public Mono<Void> filter(ServerWebExchange rawExchange, GatewayFilterChain chain) {
+        ServerWebExchange exchange =
+                rawExchange.mutate().request(stripUserIdentityHeaders(rawExchange.getRequest())).build();
         ServerHttpRequest request = exchange.getRequest();
         String host = request.getURI().getHost();
         String path = request.getURI().getPath();
@@ -128,6 +138,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return verify(cookie.getValue())
                 .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims)).build()))
                 .onErrorResume(e -> chain.filter(exchange));
+    }
+
+    private ServerHttpRequest stripUserIdentityHeaders(ServerHttpRequest request) {
+        return request.mutate()
+                .headers(httpHeaders -> USER_IDENTITY_HEADERS.forEach(httpHeaders::remove))
+                .build();
     }
 
     private ServerHttpRequest withUserHeaders(ServerHttpRequest request, JWTClaimsSet claims) {
