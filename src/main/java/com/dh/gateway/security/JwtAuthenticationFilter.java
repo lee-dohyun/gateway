@@ -54,6 +54,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     "/api/auth/verify-email", "/api/auth/resend-verification",
                     "/api/auth/refresh", "/api/auth/find-id",
                     "/api/auth/forgot-password", "/api/auth/reset-password",
+                    "/api/auth/phone/send-otp", "/api/auth/phone/verify-otp",
                     "/verify");
     private static final List<String> PUBLIC_PATH_PREFIXES =
             // /icon.svg: Next.js App Router의 파일 기반 favicon 라우트(app/icon.svg) — 로그인 전
