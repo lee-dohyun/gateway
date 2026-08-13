@@ -166,9 +166,12 @@ spring:
             uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
             filters:
             - PreserveHostHeader
+         # ui.posselect.com과 storybook.posselect.com은 같은 서비스(디자인 시스템 문서
+         # 사이트 = Storybook 정적 빌드)를 가리키는 두 진입점이다. ui.* 가 원래 이름이라
+         # 기존 링크/북마크 호환을 위해 유지하고, storybook.* 을 별칭으로 추가했다.
          -  id: posselect-ui
             predicates:
-            - Host=ui.posselect.com
+            - Host=ui.posselect.com,storybook.posselect.com
             uri: http://posselect-ui-service.default.svc.cluster.local:80
          -  id: posselect-shell
             predicates:
