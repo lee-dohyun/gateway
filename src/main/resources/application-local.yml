@@ -5,7 +5,7 @@ gateway:
       protected-hosts: customer.localhost
       optional-auth-hosts: product.localhost
       home-host: home.localhost
-      redirect-url: http://home.localhost:8080/
+      login-url: http://customer.localhost:8080/login
 spring:
    cloud:
       gateway:

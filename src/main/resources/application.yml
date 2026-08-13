@@ -15,7 +15,7 @@ gateway:
       protected-hosts: ${SHOP_PROTECTED_HOSTS:customer.posselect.com}
       optional-auth-hosts: ${SHOP_OPTIONAL_AUTH_HOSTS:product.posselect.com}
       home-host: ${SHOP_HOME_HOST:home.posselect.com}
-      redirect-url: ${SHOP_REDIRECT_URL:https://home.posselect.com/}
+      login-url: ${SHOP_LOGIN_URL:https://customer.posselect.com/login}
 spring:
    application:
       name: gateway

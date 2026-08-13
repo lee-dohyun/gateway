@@ -24,8 +24,11 @@ public class GatewaySecurityProperties {
     /** 로그인 상태 조회(/api/auth/me)를 강제 인증 없이 통과시키는 공개 랜딩 호스트. */
     private String homeHost;
 
-    /** 인증 실패 시 리다이렉트할 URL. */
-    private String redirectUrl;
+    /**
+     * 인증 실패 시 리다이렉트할 로그인 페이지 URL. 원래 가려던 경로는 redirect_uri 쿼리파라미터로
+     * 붙여서 로그인 성공 후 그 경로로 돌아갈 수 있게 한다(customer.front 로그인 페이지가 이미 지원).
+     */
+    private String loginUrl;
 
     /** Keycloak realm JWKS 등을 조회할 클러스터 내부 URL. */
     private String keycloakRealmUrl;
@@ -62,12 +65,12 @@ public class GatewaySecurityProperties {
         this.homeHost = homeHost;
     }
 
-    public String getRedirectUrl() {
-        return redirectUrl;
+    public String getLoginUrl() {
+        return loginUrl;
     }
 
-    public void setRedirectUrl(String redirectUrl) {
-        this.redirectUrl = redirectUrl;
+    public void setLoginUrl(String loginUrl) {
+        this.loginUrl = loginUrl;
     }
 
     public String getKeycloakRealmUrl() {

@@ -34,7 +34,8 @@ import reactor.core.publisher.Mono;
  * {@link GatewaySecurityProperties#getProtectedHosts()}에 명시된 호스트(로그인/정적 리소스
  * 제외한 요청)만 ACCESS_TOKEN 쿠키의 JWT를 Keycloak(customer realm)의 공개키로 검증한다.
  * 검증 성공 시 토큰의 email/name 클레임을 X-User-Email/X-User-Name 헤더로 주입한다.
- * 검증 실패 시 {@link GatewaySecurityProperties#getRedirectUrl()}로 리다이렉트한다.
+ * 검증 실패 시 {@link GatewaySecurityProperties#getLoginUrl()}로 리다이렉트하되, 원래 가려던 경로를
+ * redirect_uri 쿼리파라미터로 실어서 로그인 성공 후 그 경로로 바로 돌아갈 수 있게 한다.
  * {@link GatewaySecurityProperties#getOptionalAuthHosts()}는 로그인을 강제하지 않되, 쿠키가
  * 있으면 검증해서 헤더를 주입한다 — 비로그인 사용자도 상품/장바구니는 그대로 쓰되, 로그인된 경우에만
  * 주문에 계정을 연결하기 위함.
@@ -103,14 +104,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         HttpCookie cookie = request.getCookies().getFirst(ACCESS_TOKEN_COOKIE);
         if (cookie == null) {
-            return redirectToHome(exchange);
+            return redirectToLogin(exchange);
         }
 
         return verify(cookie.getValue())
                 .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims)).build()))
                 .onErrorResume(e -> {
                     logger.debug("JWT 검증 실패: {}", e.getMessage());
-                    return redirectToHome(exchange);
+                    return redirectToLogin(exchange);
                 });
     }
 
@@ -204,9 +205,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 }));
     }
 
-    private Mono<Void> redirectToHome(ServerWebExchange exchange) {
+    private Mono<Void> redirectToLogin(ServerWebExchange exchange) {
+        ServerHttpRequest request = exchange.getRequest();
+        String originalUrl = "https://" + request.getURI().getHost() + request.getURI().getPath()
+                + (request.getURI().getRawQuery() != null ? "?" + request.getURI().getRawQuery() : "");
+        String target = properties.getLoginUrl() + "?redirect_uri="
+                + URLEncoder.encode(originalUrl, StandardCharsets.UTF_8);
+
         exchange.getResponse().setStatusCode(HttpStatus.FOUND);
-        exchange.getResponse().getHeaders().setLocation(URI.create(properties.getRedirectUrl()));
+        exchange.getResponse().getHeaders().setLocation(URI.create(target));
         return exchange.getResponse().setComplete();
     }
 
