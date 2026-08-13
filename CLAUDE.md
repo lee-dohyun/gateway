@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Overview
 
 Spring Cloud Gateway (WebFlux/Netty) reverse proxy for the leedohyun.com service mesh. It sits in front of
-several backend services (auth.api, customer-front, home-front, wordpress, minio, redmine, keycloak, etc.)
+several backend services (auth.api, customer-front, store-front, wordpress, minio, redmine, keycloak, etc.)
 running in a K3s cluster, and is also expected to terminate JWT-based auth for the `customer.localhost`
 domain before forwarding identity to backend services. The codebase is intentionally tiny: one global
 filter class plus route config in YAML.
@@ -35,11 +35,11 @@ filter class plus route config in YAML.
   `keycloak.leedohyun.com`, and `architecture.leedohyun.com`. Each route explicitly re-sets
   `Host/Origin/Referer/Authorization/Cookie/X-Forwarded-For/X-Real-IP` from the incoming request via
   `SetRequestHeader` filters (added deliberately per git history — headers were being dropped otherwise).
-  **Notably, this file has no routes for `auth-api`, `customer-front`, or `home-front`** — the
+  **Notably, this file has no routes for `auth-api`, `customer-front`, or `store-front`** — the
   auth/customer/home stack described below only has routes wired up under the `local` profile.
 - `src/main/resources/application-local.yml` is the **local dev** config: host-predicate routes for
   `customer.localhost` (split into `/api/auth/**` → `auth-api:8080` and everything else →
-  `customer-front:3000`), `home.localhost` → `home-front:3000`, and `auth.localhost` → `auth-api:8080`
+  `customer-front:3000`), `home.localhost` → `store-front:3000`, and `auth.localhost` → `auth-api:8080`
   directly. When editing routing behavior for the customer/auth flow, this is the file that matters, and
   any change intended for production needs a corresponding route added to `application.yml` — it is not
   there today.

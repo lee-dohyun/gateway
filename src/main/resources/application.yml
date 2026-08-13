@@ -127,10 +127,10 @@ spring:
             - Host=home.posselect.com
             - Path=/api/auth/**
             uri: http://auth-api.customer.svc.cluster.local:8080
-         -  id: home-front
+         -  id: store-front
             predicates:
             - Host=home.posselect.com
-            uri: http://home-front.customer.svc.cluster.local:3000
+            uri: http://store-front.customer.svc.cluster.local:3000
          -  id: product-api
             predicates:
             - Host=product.posselect.com

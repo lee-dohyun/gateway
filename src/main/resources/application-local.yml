@@ -19,10 +19,10 @@ spring:
             predicates:
             - Host=customer.localhost
             uri: http://customer-front:3000
-         -  id: home-front
+         -  id: store-front
             predicates:
             - Host=home.localhost
-            uri: http://home-front:3000
+            uri: http://store-front:3000
          -  id: auth-api-direct
             predicates:
             - Host=auth.localhost
