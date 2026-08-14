@@ -33,7 +33,7 @@ import reactor.core.publisher.Mono;
  * 쇼핑몰 프론트 등)을 프록시하는 공용 진입점이라 기본적으로 모든 요청을 통과시킨다.
  * {@link GatewaySecurityProperties#getProtectedHosts()}에 명시된 호스트(로그인/정적 리소스
  * 제외한 요청)만 ACCESS_TOKEN 쿠키의 JWT를 Keycloak(customer realm)의 공개키로 검증한다.
- * 검증 성공 시 토큰의 email/name 클레임을 X-User-Email/X-User-Name 헤더로 주입한다.
+ * 검증 성공 시 토큰의 sub/email/name 클레임을 X-User-Id/X-User-Email/X-User-Name 헤더로 주입한다.
  * 검증 실패 시 {@link GatewaySecurityProperties#getLoginUrl()}로 리다이렉트하되, 원래 가려던 경로를
  * redirect_uri 쿼리파라미터로 실어서 로그인 성공 후 그 경로로 바로 돌아갈 수 있게 한다.
  * {@link GatewaySecurityProperties#getOptionalAuthHosts()}는 로그인을 강제하지 않되, 쿠키가
@@ -147,8 +147,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .build();
     }
 
+    /**
+     * X-User-Id는 Keycloak의 sub(불변 UUID)다. 이메일은 사용자가 바꿀 수 있어서(auth.api의
+     * PUT /api/auth/me) 하위 서비스가 이메일을 소유자 키로 저장하면 변경 시점에 데이터가 주인을
+     * 잃는다 — 소유자 저장/조회는 X-User-Id를, 표시나 통지는 X-User-Email을 쓸 것.
+     */
     private ServerHttpRequest withUserHeaders(ServerHttpRequest request, JWTClaimsSet claims) {
         return request.mutate()
+                .header("X-User-Id", safeString(claims.getSubject()))
                 .header("X-User-Email", safeString(claims.getClaim("email")))
                 .header("X-User-Name", urlEncode(safeString(claims.getClaim("name"))))
                 .build();
