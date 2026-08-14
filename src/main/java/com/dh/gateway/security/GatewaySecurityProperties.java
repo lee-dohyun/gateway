@@ -21,8 +21,8 @@ public class GatewaySecurityProperties {
     /** 로그인을 강제하진 않지만, 쿠키가 있으면 검증해서 사용자 헤더를 주입하는 호스트 목록. */
     private List<String> optionalAuthHosts = List.of();
 
-    /** 로그인 상태 조회(/api/auth/me)를 강제 인증 없이 통과시키는 공개 랜딩 호스트. */
-    private String homeHost;
+    /** 로그인 상태 조회(/api/auth/me)를 강제 인증 없이 통과시키는 공개 랜딩 호스트 목록. */
+    private List<String> homeHosts = List.of();
 
     /**
      * 인증 실패 시 리다이렉트할 로그인 페이지 URL. 원래 가려던 경로는 redirect_uri 쿼리파라미터로
@@ -57,12 +57,12 @@ public class GatewaySecurityProperties {
         this.optionalAuthHosts = optionalAuthHosts;
     }
 
-    public String getHomeHost() {
-        return homeHost;
+    public List<String> getHomeHosts() {
+        return homeHosts;
     }
 
-    public void setHomeHost(String homeHost) {
-        this.homeHost = homeHost;
+    public void setHomeHosts(List<String> homeHosts) {
+        this.homeHosts = homeHosts;
     }
 
     public String getLoginUrl() {

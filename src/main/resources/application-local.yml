@@ -4,7 +4,7 @@ gateway:
       keycloak-realm-url: http://keycloak:8080/realms/customer
       protected-hosts: customer.localhost
       optional-auth-hosts: product.localhost
-      home-host: home.localhost
+      home-hosts: home.localhost
       login-url: http://customer.localhost:8080/login
 spring:
    cloud:

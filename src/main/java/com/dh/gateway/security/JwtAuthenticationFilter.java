@@ -127,7 +127,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         if (!HOME_AUTH_ME_PATH.equals(path)) {
             return false;
         }
-        return properties.getHomeHost().equals(host) || properties.getProtectedHosts().contains(host);
+        return properties.getHomeHosts().contains(host) || properties.getProtectedHosts().contains(host);
     }
 
     private Mono<Void> attachUserHeadersIfPresent(ServerWebExchange exchange, GatewayFilterChain chain) {

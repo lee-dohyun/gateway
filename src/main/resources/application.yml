@@ -14,7 +14,7 @@ gateway:
       keycloak-realm-url: ${SHOP_KEYCLOAK_REALM_URL:http://keycloak-service.keycloak.svc.cluster.local/realms/customer}
       protected-hosts: ${SHOP_PROTECTED_HOSTS:customer.posselect.com}
       optional-auth-hosts: ${SHOP_OPTIONAL_AUTH_HOSTS:product.posselect.com}
-      home-host: ${SHOP_HOME_HOST:home.posselect.com}
+      home-hosts: ${SHOP_HOME_HOSTS:home.posselect.com,www.posselect.com}
       login-url: ${SHOP_LOGIN_URL:https://customer.posselect.com/login}
 spring:
    application:
@@ -34,7 +34,7 @@ spring:
             uri: no://op
          -  id: shop-root-redirect
             predicates:
-            - Host=posselect.com,www.posselect.com
+            - Host=posselect.com
             filters:
             - RedirectTo=302, https://home.posselect.com
             uri: no://op
@@ -124,7 +124,7 @@ spring:
             uri: http://customer-front.customer.svc.cluster.local:3000
          -  id: auth-api-home
             predicates:
-            - Host=home.posselect.com
+            - Host=home.posselect.com,www.posselect.com
             - Path=/api/auth/**
             uri: http://auth-api.customer.svc.cluster.local:8080
          # 2026-08-14 보안 사고 대응(Redmine msa #155): home.posselect.com은 정적
@@ -132,17 +132,18 @@ spring:
          # 요청이 컨테이너 내 셸 실행(curl)으로 이어지는 정황이 확인되어, 근본 원인
          # (Next.js) 패치 전까지 임시 완화책으로 이 호스트의 POST/PUT/PATCH/DELETE를
          # 전부 차단한다. auth-api-home 라우트가 위에서 /api/auth/**를 먼저 채가므로
-         # 로그인/회원가입 등 정상 기능에는 영향 없음.
+         # 로그인/회원가입 등 정상 기능에는 영향 없음. www.posselect.com도 2026-08-14부터
+         # home.posselect.com과 동일하게 직접 서비스되므로 같은 보호를 적용한다.
          -  id: store-front-block-write
             predicates:
-            - Host=home.posselect.com
+            - Host=home.posselect.com,www.posselect.com
             - Method=POST,PUT,PATCH,DELETE
             filters:
             - SetStatus=403
             uri: no://op
          -  id: store-front
             predicates:
-            - Host=home.posselect.com
+            - Host=home.posselect.com,www.posselect.com
             uri: http://store-front.customer.svc.cluster.local:3000
          -  id: product-api
             predicates:
