@@ -118,6 +118,17 @@ spring:
             - Host=customer.posselect.com
             - Path=/api/orders/**
             uri: http://order-api.customer.svc.cluster.local:8080
+         # 2026-08-14 보안 사고 대응(Redmine msa #155): customer-front도 store-front와
+         # 마찬가지로 자체 POST 라우트 핸들러/Server Action이 전혀 없어(전부 auth-api/
+         # order-api-customer가 처리) 같은 완화책 적용. /api/auth/**, /api/orders/**는
+         # 위 라우트가 먼저 채가므로 영향 없음.
+         -  id: customer-front-block-write
+            predicates:
+            - Host=customer.posselect.com
+            - Method=POST,PUT,PATCH,DELETE
+            filters:
+            - SetStatus=403
+            uri: no://op
          -  id: customer-front
             predicates:
             - Host=customer.posselect.com
@@ -160,10 +171,37 @@ spring:
             - Host=product.posselect.com
             - Path=/api/auth/addresses/**
             uri: http://auth-api.customer.svc.cluster.local:8080
+         # 2026-08-14 보안 사고 대응(Redmine msa #155): product-front도 자체 POST
+         # 핸들러/Server Action이 없어(전부 product-api/order-api/auth-api-addresses-
+         # product가 처리) 같은 완화책 적용.
+         -  id: product-front-block-write
+            predicates:
+            - Host=product.posselect.com
+            - Method=POST,PUT,PATCH,DELETE
+            filters:
+            - SetStatus=403
+            uri: no://op
          -  id: product-front
             predicates:
             - Host=product.posselect.com
             uri: http://product-front.customer.svc.cluster.local:3000
+         # 2026-08-14 보안 사고 대응(Redmine msa #155): admin-front는 다른 프론트와
+         # 달리 /api/admin/**, /api/login 등을 게이트웨이 라우트 분리 없이 자기 자신이
+         # 직접 처리한다. 그래서 store-front 방식대로 통째로 막으면 관리자 로그인/상품
+         # 관리 기능이 깨진다. /api/** 는 이 carve-out으로 먼저 통과시키고, 그 외
+         # 경로(페이지 라우트)로 오는 쓰기성 요청만 차단한다.
+         -  id: admin-front-api
+            predicates:
+            - Host=admin.posselect.com
+            - Path=/api/**
+            uri: http://admin-front.customer.svc.cluster.local:3000
+         -  id: admin-front-block-write
+            predicates:
+            - Host=admin.posselect.com
+            - Method=POST,PUT,PATCH,DELETE
+            filters:
+            - SetStatus=403
+            uri: no://op
          -  id: admin-front
             predicates:
             - Host=admin.posselect.com
