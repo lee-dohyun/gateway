@@ -36,7 +36,7 @@ spring:
             predicates:
             - Host=posselect.com
             filters:
-            - RedirectTo=302, https://home.posselect.com
+            - RedirectTo=302, https://www.posselect.com
             uri: no://op
          -  id: shop-customer-redirect
             predicates:
