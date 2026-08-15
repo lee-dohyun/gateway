@@ -98,7 +98,7 @@ spring:
             uri: http://imgproxy-service.minio.svc.cluster.local:8080
          -  id: redmine
             predicates:
-            - Host=alm.leedohyun.com,redmine.leedohyun.com
+            - Host=alm.leedohyun.com,redmine.leedohyun.com,alm.posselect.com,redmine.posselect.com
             uri: http://redmine-service.redmine.svc.cluster.local:3000
          -  id: keycloak
             predicates:
