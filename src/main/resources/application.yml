@@ -117,6 +117,8 @@ spring:
             predicates:
             - Host=customer.posselect.com
             - Path=/api/orders/**
+            filters:
+            - AddRequestHeader=X-Channel, 1
             uri: http://order-api.customer.svc.cluster.local:8080
          # 2026-08-14 보안 사고 대응(Redmine msa #155): customer-front도 store-front와
          # 마찬가지로 자체 POST 라우트 핸들러/Server Action이 전혀 없어(전부 auth-api/
@@ -160,11 +162,15 @@ spring:
             predicates:
             - Host=product.posselect.com
             - Path=/api/products/**,/api/categories/**,/api/cart/**
+            filters:
+            - AddRequestHeader=X-Channel, 1
             uri: http://product-api.customer.svc.cluster.local:8080
          -  id: order-api
             predicates:
             - Host=product.posselect.com
             - Path=/api/orders/**
+            filters:
+            - AddRequestHeader=X-Channel, 1
             uri: http://order-api.customer.svc.cluster.local:8080
          -  id: auth-api-addresses-product
             predicates:
