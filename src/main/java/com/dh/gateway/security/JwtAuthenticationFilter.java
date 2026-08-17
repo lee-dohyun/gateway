@@ -108,7 +108,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         return verify(cookie.getValue())
-                .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims)).build()))
+                .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims, cookie.getValue())).build()))
                 .onErrorResume(e -> {
                     logger.debug("JWT 검증 실패: {}", e.getMessage());
                     return redirectToLogin(exchange);
@@ -137,7 +137,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
         return verify(cookie.getValue())
-                .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims)).build()))
+                .flatMap(claims -> chain.filter(exchange.mutate().request(withUserHeaders(request, claims, cookie.getValue())).build()))
                 .onErrorResume(e -> chain.filter(exchange));
     }
 
@@ -152,11 +152,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * PUT /api/auth/me) 하위 서비스가 이메일을 소유자 키로 저장하면 변경 시점에 데이터가 주인을
      * 잃는다 — 소유자 저장/조회는 X-User-Id를, 표시나 통지는 X-User-Email을 쓸 것.
      */
-    private ServerHttpRequest withUserHeaders(ServerHttpRequest request, JWTClaimsSet claims) {
+    private ServerHttpRequest withUserHeaders(ServerHttpRequest request, JWTClaimsSet claims, String token) {
         return request.mutate()
                 .header("X-User-Id", safeString(claims.getSubject()))
                 .header("X-User-Email", safeString(claims.getClaim("email")))
                 .header("X-User-Name", urlEncode(safeString(claims.getClaim("name"))))
+                .header("Authorization", "Bearer " + token)
                 .build();
     }
 
