@@ -57,4 +57,4 @@ jobs:
       - name: Wait for rollout
         run: |
           /usr/local/bin/kubectl --kubeconfig=/home/leedohyun/.kube-ci/gateway-deployer.kubeconfig \
-            rollout status deployment/spring-cloud-gateway -n default --timeout=300s
+            rollout status deployment/spring-cloud-gateway -n default --timeout=600s
