@@ -130,6 +130,13 @@ spring:
          -  id: customer-front
             predicates:
             - Host=customer.posselect.com
+            # PreserveHostHeader: /terms, /privacy SSR이 headers().get("host")로 자기 호스트를
+            # 재구성해 https://<host>/api/agreements로 되돌아온다(protocol은 host가
+            # "localhost"를 포함하지 않으면 무조건 https로 판단). 이 필터가 없으면 Host가
+            # 라우트 대상(customer-front.customer.svc.cluster.local:3000, 평문 3000 포트)으로
+            # 재작성되어 그 주소에 TLS를 시도 -> "wrong version number"로 500. 2026-08-20 발견.
+            filters:
+            - PreserveHostHeader
             uri: http://customer-front.customer.svc.cluster.local:3000
          -  id: auth-api-home
             predicates:
