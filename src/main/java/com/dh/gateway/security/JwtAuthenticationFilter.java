@@ -64,7 +64,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     "/api/auth/refresh", "/api/auth/find-id",
                     "/api/auth/forgot-password", "/api/auth/reset-password",
                     "/api/auth/phone/send-otp", "/api/auth/phone/verify-otp",
-                    "/verify");
+                    "/verify",
+                    // /api/agreements: customer.front의 Next.js route handler(app/api/agreements/route.ts)로,
+                    // 클러스터 내부 auth-api의 GET /api/auth/agreements를 프록시해 이용약관/개인정보처리방침
+                    // 본문만 돌려준다(사용자 데이터 없음, home.posselect.com 경유로는 이미 비인증 공개).
+                    // 회원가입 폼의 약관 모달이 로그인 전에 브라우저에서 직접 호출하므로 공개가 필요하다.
+                    "/api/agreements");
     private static final List<String> PUBLIC_PATH_PREFIXES =
             // /icon.svg: Next.js App Router의 파일 기반 favicon 라우트(app/icon.svg) — 로그인 전
             // 페이지(/login 등)도 <link rel="icon">으로 이걸 참조하는데 빠져 있어서 비로그인 사용자는
@@ -72,7 +77,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             // /find-id, /reset-password: 아이디/비밀번호 찾기 페이지 — 로그인 전 접근이 목적이라
             // /login, /signup과 동일하게 공개 처리해야 한다(안 하면 비로그인 사용자가 접근 시 홈으로
             // 302 리다이렉트되는, gateway/CLAUDE.md에 기록된 것과 동일한 함정).
+            // /terms, /privacy: 이용약관/개인정보처리방침 페이지 — 가입 전에 읽는 것이 목적이고,
+            // 두 페이지 모두 SSR에서 자기 호스트(https://customer.posselect.com/api/agreements)로
+            // 다시 나갔다 들어오므로 페이지 경로와 위 /api/agreements가 둘 다 공개여야 동작한다.
             List.of("/login", "/signup", "/find-id", "/find-password", "/reset-password",
+                    "/terms", "/privacy",
                     "/_next/", "/favicon.ico", "/icon.svg");
 
     private final GatewaySecurityProperties properties;

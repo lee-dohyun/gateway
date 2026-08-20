@@ -96,7 +96,17 @@ added, and the *API* path `/api/auth/verify-email` was correctly whitelisted at 
 *frontend page* path `/verify` itself was not, since `customer.leedohyun.com` is a `PROTECTED_HOSTS`
 entry. Unauthenticated visitors (anyone clicking the email link before their first login) were silently
 302-redirected to `home.leedohyun.com` with no error. Fixed by adding `/verify` to `PUBLIC_EXACT_PATHS`
-(commit `0565a01`). **Whenever `customer.front` (or any future frontend under a `PROTECTED_HOSTS` domain)
+(commit `0565a01`). Same bug again (2026-08-20): `customer.front`'s terms/privacy content was
+unreachable logged-out because **all three** of `/api/agreements` (the signup modal's client-side
+fetch), `/terms` and `/privacy` (standalone pages, whose SSR loops back out through this gateway to
+`/api/agreements` on its own host) were missing from both lists — and the modal failed *silently*,
+because `fetch` follows the 302 and receives the login page HTML as a **200**, so `res.ok` is true and
+only the subsequent `res.json()` throws, straight into an empty `catch`. Fixed by adding
+`/api/agreements` to `PUBLIC_EXACT_PATHS` and `/terms`, `/privacy` to `PUBLIC_PATH_PREFIXES`, plus
+`JwtAuthenticationFilterPublicPathTest`, which now pins every pre-login path so the next omission
+fails the build instead of production.
+
+**Whenever `customer.front` (or any future frontend under a `PROTECTED_HOSTS` domain)
 adds a new page meant to be reachable before login, this file's `PUBLIC_EXACT_PATHS`/`PUBLIC_PATH_PREFIXES`
 must be checked/updated too — both the page route AND any API route it calls.**
 
