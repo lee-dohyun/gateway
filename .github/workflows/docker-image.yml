@@ -7,6 +7,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout code
@@ -43,6 +46,35 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.PROJECT_NAME }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+
+      # DevSecOps SCA pilot (architecture#15 / msa#155): scan the image we just
+      # built/pushed for known OS + Java/Gradle vulnerabilities. Report-only for
+      # now — TODO: once findings are triaged, set exit-code: '1' with
+      # severity: 'CRITICAL,HIGH' to actually gate the build/deploy. This is the
+      # single entrypoint / auth service, so treat any HIGH+ finding here as
+      # priority triage once this pilot graduates from report-only.
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
+          exit-code: "0"
+
+      - name: Upload Trivy scan results as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-results-${{ github.sha }}
+          path: trivy-results.sarif
+          retention-days: 30
+
+      - name: Upload Trivy scan results to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4.37.7
+        with:
+          sarif_file: "trivy-results.sarif"
 
   deploy:
     needs: build
