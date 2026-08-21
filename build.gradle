@@ -29,7 +29,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'         // ✅ Netty 기반 웹서버
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'        // ✅ /actuator/health (liveness/readiness probe)
 	implementation 'io.micrometer:micrometer-registry-prometheus'                 // ✅ /actuator/prometheus
-	implementation 'com.nimbusds:nimbus-jose-jwt:9.37.3'
+	implementation 'com.nimbusds:nimbus-jose-jwt:10.9.1'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'
