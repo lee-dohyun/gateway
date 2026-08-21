@@ -116,10 +116,21 @@ spring:
             filters:
             - AddRequestHeader=X-Channel, 1
             uri: http://order-api.customer.svc.cluster.local:8080
+         # 마이페이지의 찜 목록이 이 호스트에서 /api/wishlists 를 호출한다(product.api 가 처리).
+         # customer.posselect.com 은 protected host 라 이 경로는 로그인이 강제되고, 게이트웨이가
+         # 검증 후 X-User-Id 를 주입한다 — product.api 의 WishlistController 가 이 헤더를 필수로 요구.
+         # 반드시 아래 customer-front-block-write 보다 앞에 있어야 DELETE 가 403 으로 막히지 않는다(#210).
+         -  id: product-api-wishlist-customer
+            predicates:
+            - Host=customer.posselect.com
+            - Path=/api/wishlists/**
+            filters:
+            - AddRequestHeader=X-Channel, 1
+            uri: http://product-api.customer.svc.cluster.local:8080
          # 2026-08-14 보안 사고 대응(Redmine msa #155): customer-front도 store-front와
          # 마찬가지로 자체 POST 라우트 핸들러/Server Action이 전혀 없어(전부 auth-api/
-         # order-api-customer가 처리) 같은 완화책 적용. /api/auth/**, /api/orders/**는
-         # 위 라우트가 먼저 채가므로 영향 없음.
+         # order-api-customer가 처리) 같은 완화책 적용. /api/auth/**, /api/orders/**,
+         # /api/wishlists/** 는 위 라우트들이 먼저 채가므로 영향 없음.
          -  id: customer-front-block-write
             predicates:
             - Host=customer.posselect.com
@@ -175,7 +186,10 @@ spring:
          -  id: product-api
             predicates:
             - Host=product.posselect.com
-            - Path=/api/products/**,/api/categories/**,/api/cart/**
+            # /api/wishlists/**: 찜 기능. 빠져 있어서 상품 상세의 찜 버튼이 404/403 이었다(#210).
+            # product.posselect.com 은 optional-auth 라 로그인 상태에서만 X-User-Id 가 실린다 —
+            # 비로그인 요청은 product.api 가 필수 헤더 누락으로 400 을 준다(프론트가 로그인 유도).
+            - Path=/api/products/**,/api/categories/**,/api/cart/**,/api/wishlists/**
             filters:
             - AddRequestHeader=X-Channel, 1
             uri: http://product-api.customer.svc.cluster.local:8080
