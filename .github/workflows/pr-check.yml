@@ -1,0 +1,35 @@
+# PR 단계 품질 게이트 (Java/Spring)
+#
+# 왜 별도 파일인가: docker-image.yml 은 main push 시 빌드→Docker Hub→self-hosted runner 배포까지
+# 수행한다. 그 파이프라인의 유일한 게이트는 빌드 성공이고, main push 는 곧 프로덕션 배포다.
+# 이 워크플로는 그 앞단에서 PR을 검증하는 것이 목적이므로 배포 파이프라인과 분리해 둔다.
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main]
+
+# 같은 PR에 새 커밋이 밀리면 이전 실행은 취소한다(self-hosted runner 자원 절약).
+concurrency:
+  group: pr-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Run tests
+        run: ./gradlew test --console=plain
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test/
+          retention-days: 7
