@@ -172,17 +172,6 @@ spring:
             predicates:
             - Host=home.posselect.com,www.posselect.com
             uri: http://store-front.customer.svc.cluster.local:3000
-         -  id: coffee-front-block-write
-            predicates:
-            - Host=coffee.posselect.com
-            - Method=POST,PUT,PATCH,DELETE
-            filters:
-            - SetStatus=403
-            uri: no://op
-         -  id: coffee-front
-            predicates:
-            - Host=coffee.posselect.com
-            uri: http://coffee-front.customer.svc.cluster.local:3000
          -  id: product-api
             predicates:
             - Host=product.posselect.com
