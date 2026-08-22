@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Spring Cloud Gateway (WebFlux/Netty) reverse proxy that is the **single entry point for every domain on
 this cluster** — both the `leedohyun.com` family (tool, blog/wordpress, minio, architecture, router admin)
-and the `posselect.com` shopping mall family (customer / home / www / product / admin / coffee fronts,
+and the `posselect.com` shopping mall family (customer / home / www / product / admin fronts,
 their APIs, keycloak, grafana, imgproxy/CDN, the design-system and shell static sites). Nothing reaches a
 backend without passing through here.
 
@@ -51,7 +51,7 @@ gone and must not be reintroduced.
     to `www.posselect.com`.
   - `posselect.com` family: `customer` (auth-api, order-api, customer-front), `home`+`www` (auth-api,
     store-front), `product` (product-api, order-api, auth-api addresses, product-front), `admin`,
-    `coffee`, `keycloak`, `monitoring` (grafana), `ui`+`storybook`, `shell`, `static`, `image`
+    `keycloak`, `monitoring` (grafana), `ui`+`storybook`, `shell`, `static`, `image`
     (cdn-alias for `/cdn/**`, imgproxy otherwise).
 - **Route order is load-bearing.** Spring Cloud Gateway matches in declaration order, and three patterns
   in this file depend on it:

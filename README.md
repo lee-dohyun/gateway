@@ -5,7 +5,7 @@ leedohyun.com / posselect.com 클러스터의 **단일 진입점**. Spring Cloud
 ## 역할
 
 - **모든 도메인이 여기를 지난다.** `leedohyun.com` 계열(tool, blog/wordpress, minio, architecture,
-  router 관리 UI)과 `posselect.com` 쇼핑몰 계열(customer / home / www / product / admin / coffee 프론트와
+  router 관리 UI)과 `posselect.com` 쇼핑몰 계열(customer / home / www / product / admin 프론트와
   각 API, keycloak, grafana, imgproxy·CDN, 디자인 시스템/셸 정적 사이트)을 호스트 프리디케이트로 분기한다.
   구 `*.leedohyun.com` 쇼핑몰 호스트는 프록시가 아니라 `*.posselect.com`으로 302 리다이렉트한다.
 - **인증은 이 저장소에서만 강제된다.** `JwtAuthenticationFilter`(GlobalFilter)가 `ACCESS_TOKEN` 쿠키의
