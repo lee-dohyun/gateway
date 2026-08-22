@@ -26,6 +26,14 @@ spring:
             predicates:
             - Host=tool.leedohyun.com
             uri: http://tool-service.tool.svc.cluster.local:80
+         # tool.posselect.com = PosSelect 개발자 도구 모음 (저장소 lee-dohyun/tool.front).
+         # 위 tool.leedohyun.com(개인 유틸 사이트)과 같은 네임스페이스에 있지만 별개 서비스다 —
+         # 백엔드 Service 이름이 다르므로 두 라우트를 합치지 말 것.
+         # 인증 없음(공개): protected-hosts 에 넣지 않는다. 링크되는 도구들은 각자 자체 로그인이 있다.
+         -  id: posselect-tool
+            predicates:
+            - Host=tool.posselect.com
+            uri: http://posselect-tool-service.tool.svc.cluster.local:80
          -  id: root-redirect
             predicates:
             - Host=leedohyun.com,www.leedohyun.com
