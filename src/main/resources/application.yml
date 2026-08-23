@@ -249,6 +249,30 @@ spring:
             uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
             filters:
             - PreserveHostHeader
+         # storybook.posselect.com/shell/** → posselect-shell의 Storybook 정적 빌드(/storybook/**).
+         #
+         # 디자인 시스템 문서는 저장소가 둘이라 Storybook 빌드도 둘인데(posselect-ui = 프리미티브,
+         # posselect-shell = Header/Footer), posselect-ui의 .storybook/main.ts가 Storybook
+         # Composition(refs)으로 shell 쪽을 사이드바에 끌어와 **한 사이트로 보이게** 하는 설계다
+         # (posselect-shell#13에서 채택). 그런데 composition은 매니저가 브라우저에서 ref의
+         # index.json을 fetch하므로, ref가 다른 호스트(shell.posselect.com)면 크로스 오리진이라
+         # CORS 헤더 없이는 차단된다 — 실제로 차단돼서 허브 사이드바에 "No stories found"만
+         # 떴다(2026-08-23 실측: TypeError: Failed to fetch).
+         #
+         # shell의 nginx에 Access-Control-Allow-Origin을 다는 대신 **같은 오리진으로 묶어**
+         # CORS 문제 자체를 없앤다 — 이 클러스터의 단일 진입점 원칙과도 맞고, 헤더 관리 지점이
+         # 늘지 않는다. shell Storybook 빌드의 에셋 참조가 전부 상대경로(./assets/…, ./sb-manager/…)라
+         # 경로 프리픽스를 바꿔도 깨지지 않는 것을 확인했다.
+         #
+         # 아래 posselect-ui 라우트보다 **반드시 앞에** 있어야 한다 — Host만 보는 그 라우트가
+         # 먼저 매치되면 /shell/**이 posselect-ui로 가버린다.
+         -  id: posselect-shell-storybook-ref
+            predicates:
+            - Host=storybook.posselect.com
+            - Path=/shell/**
+            filters:
+            - RewritePath=/shell/?(?<seg>.*), /storybook/$\{seg}
+            uri: http://posselect-shell-service.default.svc.cluster.local:80
          # ui.posselect.com과 storybook.posselect.com은 같은 서비스(디자인 시스템 문서
          # 사이트 = Storybook 정적 빌드)를 가리키는 두 진입점이다. ui.* 가 원래 이름이라
          # 기존 링크/북마크 호환을 위해 유지하고, storybook.* 을 별칭으로 추가했다.
