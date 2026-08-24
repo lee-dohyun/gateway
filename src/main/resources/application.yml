@@ -19,6 +19,10 @@ gateway:
 spring:
    application:
       name: gateway
+   data:
+      redis:
+         host: redis-service.customer.svc.cluster.local
+         port: 6379
    cloud:
       gateway:
          routes:
@@ -116,6 +120,16 @@ spring:
             predicates:
             - Host=customer.posselect.com
             - Path=/api/auth/**
+            filters:
+            - name: RequestRateLimiter
+              args:
+                 redis-rate-limiter.replenishRate: 10
+                 redis-rate-limiter.burstCapacity: 20
+                 key-resolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                 name: authCircuitBreaker
+                 fallbackUri: forward:/fallback
             uri: http://auth-api.customer.svc.cluster.local:8080
          -  id: order-api-customer
             predicates:
@@ -123,6 +137,15 @@ spring:
             - Path=/api/orders/**
             filters:
             - AddRequestHeader=X-Channel, 1
+            - name: RequestRateLimiter
+              args:
+                 redis-rate-limiter.replenishRate: 20
+                 redis-rate-limiter.burstCapacity: 50
+                 key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                 name: orderCircuitBreaker
+                 fallbackUri: forward:/fallback
             uri: http://order-api.customer.svc.cluster.local:8080
          # 마이페이지의 찜 목록이 이 호스트에서 /api/wishlists 를 호출한다(product.api 가 처리).
          # customer.posselect.com 은 protected host 라 이 경로는 로그인이 강제되고, 게이트웨이가
@@ -134,6 +157,15 @@ spring:
             - Path=/api/wishlists/**
             filters:
             - AddRequestHeader=X-Channel, 1
+            - name: RequestRateLimiter
+              args:
+                 redis-rate-limiter.replenishRate: 20
+                 redis-rate-limiter.burstCapacity: 50
+                 key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                 name: productCircuitBreaker
+                 fallbackUri: forward:/fallback
             uri: http://product-api.customer.svc.cluster.local:8080
          # 2026-08-14 보안 사고 대응(Redmine msa #155): customer-front도 store-front와
          # 마찬가지로 자체 POST 라우트 핸들러/Server Action이 전혀 없어(전부 auth-api/
@@ -183,12 +215,18 @@ spring:
          -  id: product-api
             predicates:
             - Host=product.posselect.com
-            # /api/wishlists/**: 찜 기능. 빠져 있어서 상품 상세의 찜 버튼이 404/403 이었다(#210).
-            # product.posselect.com 은 optional-auth 라 로그인 상태에서만 X-User-Id 가 실린다 —
-            # 비로그인 요청은 product.api 가 필수 헤더 누락으로 400 을 준다(프론트가 로그인 유도).
             - Path=/api/products/**,/api/categories/**,/api/cart/**,/api/wishlists/**
             filters:
             - AddRequestHeader=X-Channel, 1
+            - name: RequestRateLimiter
+              args:
+                 redis-rate-limiter.replenishRate: 50
+                 redis-rate-limiter.burstCapacity: 100
+                 key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                 name: productCircuitBreaker
+                 fallbackUri: forward:/fallback
             uri: http://product-api.customer.svc.cluster.local:8080
          -  id: order-api
             predicates:
@@ -196,6 +234,15 @@ spring:
             - Path=/api/orders/**
             filters:
             - AddRequestHeader=X-Channel, 1
+            - name: RequestRateLimiter
+              args:
+                 redis-rate-limiter.replenishRate: 20
+                 redis-rate-limiter.burstCapacity: 50
+                 key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                 name: orderCircuitBreaker
+                 fallbackUri: forward:/fallback
             uri: http://order-api.customer.svc.cluster.local:8080
          -  id: auth-api-addresses-product
             predicates:
@@ -272,6 +319,19 @@ spring:
             ssl:
                trustedX509Certificates:
                - classpath:router-admin-ca.pem
+resilience4j:
+   circuitbreaker:
+      configs:
+         default:
+            slidingWindowSize: 10
+            failureRateThreshold: 50
+            waitDurationInOpenState: 10s
+            permittedNumberOfCallsInHalfOpenState: 3
+            minimumNumberOfCalls: 5
+   timelimiter:
+      configs:
+         default:
+            timeoutDuration: 3s
 logging:
    level:
       root: INFO
