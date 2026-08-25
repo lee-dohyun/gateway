@@ -61,7 +61,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_EXACT_PATHS =
             List.of("/api/auth/login", "/api/auth/signup", "/api/auth/logout",
                     "/api/auth/verify-email", "/api/auth/resend-verification",
-                    "/api/auth/refresh", "/api/auth/find-id",
+                    "/api/auth/refresh", "/api/auth/find-id", "/api/auth/callback",
                     "/api/auth/forgot-password", "/api/auth/reset-password",
                     "/api/auth/phone/send-otp", "/api/auth/phone/verify-otp",
                     "/verify",
