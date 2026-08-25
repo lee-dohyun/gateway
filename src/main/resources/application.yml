@@ -1,6 +1,17 @@
 server:
    forward-headers-strategy: framework
 management:
+   # actuator 를 별도 포트로 격리한다(#236). 8080 에 두면 actuator 의 핸들러 매핑이
+   # RoutePredicateHandlerMapping 보다 우선순위가 높아서, Host= 프리디케이트와 무관하게
+   # 게이트웨이 앞단의 **모든 공개 도메인**에서 /actuator/** 가 먼저 가로채인다. 실제로
+   # 2026-08-22 실측에서 31개 공개 호스트 전부가 /actuator/prometheus 를 무인증 200 으로
+   # 반환했다(JDK 패치버전·디스크 용량·경로별 호출량 노출).
+   # 8081 은 Service 에 name: management 로만 노출되고 Ingress 에는 올리지 않는다 —
+   # 즉 클러스터 내부(kubelet probe, Prometheus 스크레이프)에서만 도달 가능하다.
+   # 이 값을 바꾸면 ~/msa/spring-cloud-gateway/gateway-deployment.yaml 의 probe 포트와
+   # ~/msa/monitoring/app-servicemonitors.yaml 의 ServiceMonitor port 도 같이 바꿔야 한다.
+   server:
+      port: 8081
    endpoints:
       web:
          exposure:
