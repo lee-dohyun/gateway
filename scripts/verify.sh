@@ -48,6 +48,16 @@ run() { # run <이름> <명령...>
 }
 
 if [ -x ./gradlew ]; then
+  # Testcontainers 소켓. 이 개발 호스트의 /var/run/docker.sock 은 root 전용 podman 소켓이라
+  # 기본값으론 컨테이너 테스트가 전부 "Could not find a valid Docker environment" 로 죽는다.
+  # 예전엔 호출자가 DOCKER_HOST 를 줬거나 test 태스크가 UP-TO-DATE 일 때만 통과했다(gateway#269).
+  # 명시값은 존중하고, 사용자 podman 소켓이 실제로 있을 때만 채운다 — CI(ubuntu-latest)엔 없다.
+  PODMAN_SOCK="/run/user/$(id -u)/podman/podman.sock"
+  if [ -z "${DOCKER_HOST:-}" ] && [ -S "$PODMAN_SOCK" ]; then
+    export DOCKER_HOST="unix://$PODMAN_SOCK"
+    export TESTCONTAINERS_RYUK_DISABLED="${TESTCONTAINERS_RYUK_DISABLED:-true}"
+    echo "verify: DOCKER_HOST=$DOCKER_HOST (사용자 podman 소켓 기본값)" >&2
+  fi
   run "./gradlew test" ./gradlew test --console=plain -q || true
 elif [ -f package.json ] && [ ! -d node_modules ]; then
   # worktree 를 새로 판 경우 등 의존성이 없는 트리에서는 검증이 성립하지 않는다.
