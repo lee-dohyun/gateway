@@ -55,4 +55,4 @@ jobs:
             
             main push 가 곧 프로덕션 배포이므로 배포 후 되돌리기 어려운 변경을 특히 주의해서 볼 것.
             확실한 결함만 지적하고, 추측성 지적은 하지 말 것.
-          claude_args: --model claude-sonnet-5 --max-turns 15
+          claude_args: --model claude-opus-5-5 --max-turns 15
