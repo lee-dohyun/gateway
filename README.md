@@ -21,7 +21,6 @@ leedohyun.com / posselect.com 클러스터의 **단일 진입점**. Spring Cloud
 |---|---|
 | `src/main/resources/application.yml` | 프로덕션 라우트 전체 + `gateway.security.*` 기본값. **라우트 선언 순서가 동작에 영향을 준다**(API 경로 → 쓰기 차단 → 프론트 catch-all) |
 | `src/main/resources/application-local.yml` | `local` 프로파일. customer/home/auth 스택만 `*.localhost`로 |
-| `src/main/resources/router-admin-ca.pem` | `router.leedohyun.com` 프록시가 신뢰할 사설 CA. `classpath:`로 참조되는 빌드 리소스 |
 | `src/main/java/com/dh/gateway/security/` | `JwtAuthenticationFilter`, `GatewaySecurityProperties` |
 | `src/test/.../JwtAuthenticationFilterPublicPathTest.java` | 로그인 전 접근 가능해야 하는 경로를 전부 고정. 화이트리스트 누락이 프로덕션이 아니라 빌드에서 터지게 한다 |
 

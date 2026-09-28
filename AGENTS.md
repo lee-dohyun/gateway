@@ -68,9 +68,9 @@ gone and must not be reintroduced.
   `customer-front` (its `/terms`, `/privacy` SSR rebuilds `https://<host>/api/agreements` from the incoming
   Host, and a rewritten Host makes it attempt TLS against a plaintext port 3000 → 500) and `monitoring`.
   Do not remove them as noise. Elsewhere the app relies on `server.forward-headers-strategy: framework`.
-- `router-admin` proxies to `https://leedohyun.asuscomm.com:8443` with a pinned certificate:
-  `spring.cloud.gateway.httpclient.ssl.trustedX509Certificates: classpath:router-admin-ca.pem`. That PEM
-  lives in `src/main/resources/` and is part of the build — do not delete it as a stray file.
+- There is intentionally **no route to the home router's admin UI** (`router.leedohyun.com` was removed in
+  gateway#277 — it exposed the ASUS login page to the internet and forged Origin/Referer to pass its CSRF
+  check). Router administration is LAN-only; do not re-add it.
 - `src/main/resources/application-local.yml` is the **local dev** profile: the same customer/home/auth
   stack pointed at `*.localhost` and Docker-network service names, plus local `gateway.security.*` values.
   It only covers that stack, so it is a small subset of production — a production routing change is not

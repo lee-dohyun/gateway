@@ -342,18 +342,9 @@ spring:
             predicates:
             - Host=shell.posselect.com
             uri: http://posselect-shell-service.default.svc.cluster.local:80
-         -  id: router-admin
-            predicates:
-            - Host=router.leedohyun.com
-            uri: https://leedohyun.asuscomm.com:8443
-            filters:
-            - SetRequestHeader=Host, leedohyun.asuscomm.com
-            - SetRequestHeader=Origin, https://leedohyun.asuscomm.com:8443
-            - SetRequestHeader=Referer, https://leedohyun.asuscomm.com:8443/Main_Login.asp
-         httpclient:
-            ssl:
-               trustedX509Certificates:
-               - classpath:router-admin-ca.pem
+         # router-admin(router.leedohyun.com → ASUS 관리페이지 프록시)은 제거했다(gateway#277).
+         # 인증 없이 라우터 로그인 페이지를 인터넷에 노출하고 Origin/Referer 위조로 CSRF 검사까지
+         # 우회하고 있었다. 라우터 관리는 LAN(192.168.50.1)에서만 할 것 — 다시 추가하지 말 것.
 resilience4j:
    circuitbreaker:
       configs:
