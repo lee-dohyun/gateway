@@ -295,6 +295,26 @@ spring:
             predicates:
             - Host=admin.posselect.com
             uri: http://admin-front.customer.svc.cluster.local:3000
+         # partner.posselect.com = 파트너센터(외부 판매자 상품 등록, lee-dohyun/partner.front, gateway#279).
+         # admin-front 와 같은 BFF 패턴 — /api/** 는 앱 자신의 route handler(로그인·중계·업로드)가 받고,
+         # 그 외 페이지 경로로 오는 쓰기 요청은 막는다. protected-hosts 에 넣지 않는다: 인증은 partner realm
+         # 토큰으로 partner-front middleware 와 product.api 가 각각 직접 검증한다(게이트웨이 헤더 신뢰 금지).
+         -  id: partner-front-api
+            predicates:
+            - Host=partner.posselect.com
+            - Path=/api/**
+            uri: http://partner-front.customer.svc.cluster.local:3000
+         -  id: partner-front-block-write
+            predicates:
+            - Host=partner.posselect.com
+            - Method=POST,PUT,PATCH,DELETE
+            filters:
+            - SetStatus=403
+            uri: no://op
+         -  id: partner-front
+            predicates:
+            - Host=partner.posselect.com
+            uri: http://partner-front.customer.svc.cluster.local:3000
          -  id: monitoring-redirect
             predicates:
             - Host=monitoring.leedohyun.com
