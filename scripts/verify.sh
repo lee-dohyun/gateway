@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # push 전 검증 — 이 저장소의 **도구 무관 단일 진입점**.
 #
-# 호출자 3곳(같은 스크립트를 부른다):
+# 호출자 2곳(같은 스크립트를 부른다):
 #   - .githooks/pre-push                     git push 하는 모든 주체(Codex/Antigravity/사람 포함)
 #   - .claude/hooks/pre-push-verify.sh       Claude Code (PreToolUse)
-#   - .github/workflows/pr-check.yml         CI
+# CI(.github/workflows/pr-check.yml)는 이 스크립트를 부르지 않는다 — pull_request 에서 ./gradlew test 를 직접 돌린다(gateway#288).
 #
 # 왜 이렇게 바꿨나: 2026-08-21 실측에서 검증 로직이 `.claude/hooks/` 아래에만 있었고
 # `core.hooksPath` 는 전 저장소 unset, `.git/hooks` 는 비어 있었다. 즉 Claude 이외의 도구가
