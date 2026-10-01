@@ -205,13 +205,16 @@ spring:
             - Host=home.posselect.com,www.posselect.com
             - Path=/api/auth/**
             uri: http://auth-api.customer.svc.cluster.local:8080
-         # 2026-08-14 보안 사고 대응(Redmine msa #155): home.posselect.com은 정적
-         # 랜딩이라 /api/auth/** 외엔 쓰기성 요청이 정상 트래픽에 없다. 외부 POST /
-         # 요청이 컨테이너 내 셸 실행(curl)으로 이어지는 정황이 확인되어, 근본 원인
-         # (Next.js) 패치 전까지 임시 완화책으로 이 호스트의 POST/PUT/PATCH/DELETE를
-         # 전부 차단한다. auth-api-home 라우트가 위에서 /api/auth/**를 먼저 채가므로
-         # 로그인/회원가입 등 정상 기능에는 영향 없음. www.posselect.com도 2026-08-14부터
-         # home.posselect.com과 동일하게 직접 서비스되므로 같은 보호를 적용한다.
+         # home.posselect.com / www.posselect.com 쓰기 메서드 상시 차단 (심층방어).
+         # 이 호스트는 정적 랜딩이라 /api/auth/** 외엔 쓰기성 요청이 정상 트래픽에 없다.
+         # 2026-08-14 외부 POST / 가 컨테이너 내 셸 실행(curl)으로 이어지는 정황이 확인되어
+         # (Redmine msa #155) 임시로 넣었으나, 근본 원인(Next.js)이 패치된 뒤에도 앱이
+         # 받을 이유가 없는 요청을 앞단에서 끊는 편이 안전하므로 유지한다(gateway#291).
+         # auth-api-home 라우트가 위에서 /api/auth/**를 먼저 채가므로 로그인/회원가입/
+         # 프로필 수정에는 영향 없음. www.posselect.com 도 같은 보호를 적용한다.
+         # 재검토 트리거: ① store-front 에 서버 액션/쓰기 route handler 를 추가할 때 —
+         # 이 규칙을 지우지 말고 해당 경로만 위에 허용 라우트로 추가할 것.
+         # ② Traefik 뒤 ClientHost 가 SNAT(10.42.0.1)로만 보이는 문제를 해결할 때.
          -  id: store-front-block-write
             predicates:
             - Host=home.posselect.com,www.posselect.com
