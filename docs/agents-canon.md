@@ -1,0 +1,261 @@
+<!-- canon-source sha=8b53a9f595d2 src=~/msa/AGENTS.md — sync-agents-canon.sh 가 생성한다. 손으로 고치지 말 것 -->
+
+### 현재 단계: 개발 단계 (운영 제약 유예)
+
+**posselect는 아직 실사용자 트래픽이 없는 개발 단계다.** 사용자가 명시적으로 확인한 사항: 무중단 배포·롤링 안전성·하위 호환 유지 같은 운영 제약을 기본값으로 깔지 말고, 다운타임이 나거나 기존 데이터를 리셋해야 해도 **가장 단순한 방법으로 바로 변경·적용**한다.
+
+- 아래 §3의 **expand-contract(2단계 제거) 규칙은 이 유예가 끝난 뒤 적용**한다. 개발 단계에서는 컬럼/테이블을 한 번에 갈아엎어도 된다. 단 **Flyway 마이그레이션으로만 바꾼다는 규칙 자체는 유예 대상이 아니다**(체크섬 사고 이력).
+- 이 유예는 한시적이다. **실 서비스 시작 시점은 사용자가 별도로 통지**하며, 통지 이후에는 이 절을 삭제하고 §3을 그대로 적용한다.
+
+## 3. 불변 개발 규칙 (위반 금지)
+
+실제 사고에서 도출된 규칙이다. 근거 이슈를 함께 표기한다.
+
+### DB / 스키마
+- **스키마 변경은 Flyway 마이그레이션으로만.** `ddl-auto`는 `validate` 유지, `update` 복귀 금지 (posselect #104).
+- 스키마 변경은 **expand-contract**: 컬럼/테이블 제거는 "새것 추가 → 코드 전환 → 다음 릴리스에서 제거" 2단계로.
+- `@Enumerated(STRING)` enum에 값 추가 시 기존 CHECK 제약은 자동으로 안 넓혀짐 — 마이그레이션에 `ALTER` 포함할 것.
+- 재고 음수 방지 CHECK, 멱등성 유니크 인덱스 등 **DB 레벨 제약은 애플리케이션 로직과 별개로 유지**한다 (posselect #211 V3).
+- **마이그레이션 버전 번호는 `origin/main` 을 다시 확인하고 정한다.** 로컬 `ls` 로 정하면, 작업하는 동안 다른 세션이 같은 번호를 선점할 수 있다. 같은 버전이 둘이면 Flyway 는 부팅 자체를 거부한다(파드가 안 뜬다). push 직전에 `git fetch && git ls-tree origin/main <migration-dir>` 로 재확인할 것 (auth.api#29, 2026-08-22).
+
+### 트랜잭션 / 정합성
+- **`@Transactional` 안에서 원격 HTTP 호출 금지**(보상 로직 없이). 로컬 롤백돼도 원격은 롤백 안 된다 (posselect #140, order.api 사례).
+- **모든 상태 변경(쓰기) API는 멱등해야 한다.** 재시도/중복 호출이 이중 차감·이중 결제가 되지 않게 멱등성 키(예: orderId) 기반 dedup을 넣는다 (posselect #211).
+- 클래스 레벨 `@Transactional(readOnly = true)`인 클래스에 쓰기 경로 추가 금지 — 전파 함정으로 UPDATE가 조용히 사라진다. 쓰기는 별도 클래스 또는 `REQUIRES_NEW` (posselect #211 롤백 사례).
+- **트랜잭션 전파·멱등성 변경은 단위 테스트로 검증이 성립하지 않는다.** 실제 DB 상태 변화 실측(같은 키로 2회 호출 → 1회만 반영)으로 검증하고, 실측 후 데이터 원복까지 한 세트로 수행 (posselect #211).
+
+### TDD / AI 에이전트 테스트 프로토콜
+- 새 기능·버그 수정은 가능한 범위에서 **실패하는 테스트 먼저 작성 → 통과하도록 구현 → 리팩터링** 순서로 진행한다. 순수 설정/인프라 변경처럼 테스트로 표현되지 않는 작업은 예외.
+- Test Pyramid: Unit(JUnit5/Vitest, 가장 많이) → Integration(Testcontainers 실DB, 서비스 경계 검증) → E2E(Playwright, 핵심 플로우만 적게). 계층별 책임과 저장소별 현황은 `architecture` 저장소 `docs/2026-08-21-test-pyramid-strategy.md` 참고.
+- **위 "트랜잭션 / 정합성" 절의 예외가 여기도 그대로 적용된다** — 트랜잭션 전파·멱등성 변경은 단위 테스트로 검증이 성립하지 않으므로 실제 DB 상태 실측으로 검증한다.
+- **커버리지는 리포트만 하고 게이트로 쓰지 않는다(2026-08-21 결정).** 대부분 저장소가 0%에서 시작해 즉시 임계값을 걸면 모든 PR이 막힌다 — CI가 커버리지를 아티팩트로 남기고, 수치가 쌓이면 추후 임계값 도입을 재검토한다.
+- 기존 테스트가 있는 저장소는 `verify.sh`(§5-1)가 이미 push 전 실행을 강제한다 — 새 테스트를 추가하는 순간부터 자동으로 강제 대상이 된다. 단 이 강제는 **로컬 훅(push 하는 쪽)에서만** 걸린다 — CI 는 `verify.sh` 를 부르지 않는다(아래 §5-1).
+- 근거: architecture#14(장기 개선, TDD 도입), posselect-shell#26(Testcontainers 통합 테스트 표준, posselect #211 readOnly 전파 롤백 사례에서 도출).
+
+### 보안 / 인가
+- **사용자 식별 키는 Keycloak sub(`X-User-Id`)만.** 이메일은 변경 가능하므로 소유자 키로 쓰지 않는다 (posselect #210).
+- 게이트웨이 주입 헤더(`X-User-*`)는 게이트웨이가 항상 **덮어써야** 한다 — 클라이언트가 보낸 값을 통과시키면 인증 우회가 된다 (msa #87).
+- **리소스 조회/변경 API에는 소유자 검사 필수.** 소유자 불일치는 403이 아니라 **404**로 응답(순번 ID에서 403은 유효 ID 범위를 노출) (posselect #214).
+- **새로 외부에 노출되는 리소스는 순번 PK(BIGSERIAL)를 URL/응답에 노출하지 말 것** — public_id(UUIDv7/ULID) 별도 부여 (posselect #214 재발 방지).
+- 로그인 전 호출되는 경로를 추가하면 gateway `PUBLIC_EXACT_PATHS`에도 **반드시 같이** 등록 (라우팅과 인증 화이트리스트가 다른 저장소에 있음).
+- 의존성 보안 패치(특히 Next.js/Spring)는 미루지 않는다 — store-front가 Next.js RCE(CVE-2025-66478)로 실제 침해 정황을 겪음 (msa #155).
+
+### K8s / 배포
+- stateful Deployment(PVC 사용)는 `strategy: Recreate`. 모든 PV는 `reclaimPolicy: Retain`. apply 전 `claimName`을 `kubectl get pvc`와 대조.
+- 새 도메인은 기존 와일드카드 TLS 시크릿을 참조만 할 것 — Ingress에 `cert-manager.io/cluster-issuer` 어노테이션 추가 금지(와일드카드 인증서를 덮어쓰는 사고 이력).
+- Ingress는 `leedohyun-com-ingress.yaml`/`posselect-com-ingress.yaml` 두 파일에 host만 추가. 서비스별 개별 Ingress 금지.
+- CI는 main push → Docker 이미지 → CD(self-hosted runner) 즉시 프로덕션 반영. **문서만 바꿀 땐 커밋 메시지에 `[skip ci]`.**
+- **`~/msa` 매니페스트는 apply 전에 항상 `kubectl diff -f` 를 먼저 확인한다.** 이미지 태그(`:latest` ↔ 커밋 SHA)나 시크릿 값 등 라이브 상태와 어긋난(drift) 부분을 조용히 덮어써서 롤백되는 사고를 막기 위함이다.
+- 여러 서비스에 걸친 변경은 **배포 순서**를 먼저 설계할 것(예: gateway → front → api 순서를 지켜야 게스트 결제가 안 끊기는 사례, posselect #210).
+- `@posselect/ui` 변경은 Storybook만 자동 배포됨 — 소비 저장소 5개(customer/store/product/admin.front + posselect-shell)를 각각 재빌드해야 화면에 반영 (posselect #197).
+- **`[skip ci]`는 커밋 제목뿐 아니라 본문에서도 인식된다.** 다른 커밋을 인용하려고 본문에 그 문자열을 적으면 배포가 조용히 건너뛰어진다 — 실제로 product.api 캐시 수정이 이 때문에 배포되지 않았다(gateway#204).
+- **`[skip ci]`로 건너뛴 배포를 되살릴 때**: `docker-image.yml`에 `workflow_dispatch`만 추가하면 부족하다. `deploy` 잡의 `if:`가 `github.event_name == 'push'`로 고정돼 있어 수동 실행은 빌드만 하고 배포는 skip된다. 조건도 `push || workflow_dispatch`로 함께 풀 것(현재 product.api만 적용됨).
+- **`pull_request` 워크플로는 PR head 브랜치의 파일로 돈다.** main의 워크플로를 고쳐도 이미 열려 있는 PR에는 반영되지 않고, `gh run rerun`은 원래 런의 워크플로 버전을 재사용한다. 수정 확인은 **브랜치를 리베이스한 뒤** 새 런으로 할 것.
+- **Dependabot PR에는 저장소 시크릿이 전달되지 않는다.** 시크릿을 쓰는 스텝(`docker/login-action`)은 `if: github.event_name == 'push'`로 막고, `secrets.X`를 문자열에 끼워 넣는 곳(이미지 태그)은 `${{ secrets.X || 'ci-local' }}` 폴백을 줄 것 — 안 그러면 모든 Dependabot PR이 상시 실패해 PR 게이트 신호가 죽는다(gateway#209).
+
+### 범위 / 근거 / 용어 (AI 자가검토 — verify.sh 와 훅이 못 잡는 것)
+- **요청된 범위만 구현한다(YAGNI).** 요청에 없는 기능·집계·가공·리팩터링·"겸사겸사" 수정을 임의로 추가하지 않는다. 범위 밖에서 발견한 문제는 고치지 말고 이슈(또는 진행 코멘트)로 남긴다 — 다른 세션이 같은 파일을 잡고 있을 수 있다.
+- **데이터가 없으면 추측으로 채우지 않는다.** 스키마·API 응답·인덱스에 없는 값(예: 계획 마감일, 평균치, 변경 이력)은 지어내거나 유사 필드로 대용하지 말고 `null`/빈 값으로 두고, 코드 주석과 이슈에 "데이터 부재로 미구현"을 명시한다. §4-1 "Wiki 근거기반 질의" 규칙의 코드판이다.
+- **같은 개념에는 같은 이름을 쓴다.** enum 값·API 필드·DB 컬럼·i18n 키·UI 라벨의 도메인 용어는 gateway Wiki **[Glossary](https://github.com/lee-dohyun/gateway/wiki/Glossary)** 가 기준이다. 새 개념·상태값을 만들면 **코드보다 먼저** Glossary 에 한 줄 등록하고, 서비스마다 다른 이름(한쪽 `SELLER`·다른 쪽 `PARTNER` 식)을 만들지 않는다. 용어 사전은 저장소에 복제하지 않는다(한 곳에만 — 복제하면 드리프트).
+- **저장소의 현재 상태는 `git show origin/main:<파일>` 로 확인한다.** 이 머신은 공용 클론(`~/git/<repo>`)이 다른 세션의 feature 브랜치에 체크아웃돼 있는 게 정상이라 **로컬 워킹트리의 파일은 `main` 의 내용이 아니다.** "그 파일에 이 내용이 없다"를 로컬 grep 으로 판단하면 이미 있는 것을 다시 만들거나 존재하지 않는 문제를 고치는 작업을 통째로 만들어낸다 — 2026-08-25 실제 오진(37커밋 뒤쳐진 브랜치의 3줄 스텁을 main 으로 착각해 "프론트 4곳에 문서가 없다"고 보고, 실제 공백은 1곳이었다). 마이그레이션 버전 규칙(§DB/스키마)이 같은 이유로 이미 `origin/main` 재확인을 요구한다.
+- 근거: gateway#239 — 외부 하네스 문서 검토에서 채택. 위 네 가지는 스크립트로 강제되지 않아 문서 규칙으로만 막을 수 있는 것들이다. 네 번째는 customer.front#37 에서 도출.
+
+### 플레이북 (화면·도메인 단위 작업 규칙)
+- **같은 화면/도메인에서 재작업·사고가 2회 이상 반복되면** `<저장소>/docs/playbooks/<이름>.md` 를 쓴다. 전 화면을 미리 만들지 않는다 — **빈 문서·플레이스홀더 금지**(운영되지 않은 하네스는 끝내 채워지지 않는다, gateway#239 검토 사례).
+- 왜: 화면 하나가 프론트 + `@posselect/ui`/`posselect-shell` + 백엔드 2~3개에 걸치고, 그 맥락 없이 착수한 세션이 같은 원인을 다시 밟는다(메인페이지 3중 원인, 상품 이미지 4중 버그, hero 배너 CSS 변수 사례).
+- 절 구성(템플릿 `~/msa/scripts/templates/playbook.md`): ① 소스 — 걸치는 저장소·컴포넌트·공유 패키지 ② 데이터 — 호출 엔드포인트, gateway `PUBLIC_EXACT_PATHS` 등록 여부, 캐시 ③ 상태·표시 — enum 값 ↔ 라벨 ↔ 디자인 토큰(미정의 CSS 변수 금지) ④ **⚠️ 데이터 부재로 미구현/한정된 범위** ⑤ 작업 원칙·함정 ⑥ 이력.
+- 플레이북이 있는 화면은 **착수 전에 읽고, 변경 후 플레이북도 같이 갱신**한다. 저장소 `AGENTS.md` 의 저장소 고유 절에 목록을 링크한다.
+
+### 사용자 설명서 (화면을 쓰는 사람용)
+- **사용자에게 보이는 동작이 바뀌면(새 화면, 입력 항목·검증 규칙, 상태 흐름, 화면 메시지) 같은 PR 에서 그 저장소 `docs/user-guide/<업무>.md` 를 만들거나 고친다.** 내부 리팩터링·성능 개선만이면 필요 없다.
+- 양식과 작성 원칙은 `architecture` 저장소 **`docs/USER_GUIDE_STANDARD.md`** 하나가 기준이다(저장소에 복제하지 않는다). 핵심: 파일 하나 = 사용자의 업무 하나, 화면 메시지는 **코드에서 원문 복사**, "최종 확인"에는 실제로 돌려 본 날짜·배포 커밋, 확인 못 한 동작은 `(미확인)`.
+- 왜: 2026-09-29 기준 파트너·직원·고객용 설명서가 0건이었다. 외부 사용자(partner.posselect.com)가 생기면서 설명서 부재가 곧 문의 폭주가 된다. 설명서가 코드와 따로 놀면 틀린 설명서가 되므로 같은 PR 에서 갱신한다(architecture#30).
+- 설명서가 없는 기존 기능은 **그 기능을 고칠 때** 만든다(전체 소급하지 않는다 — 빈 문서·플레이스홀더 금지는 플레이북과 같다).
+
+### CLI / 스크립팅
+- **SSH를 통한 원격 bash 명령 실행 시 따옴표 이스케이프 주의:** PowerShell에서 변수(`$BODY`)를 따옴표 안에 넣어 원격 `curl` 등을 호출하면 bash 쪽에서 JSON 포맷 에러(`400 Bad Request` 등)가 발생하기 쉽다. 복잡한 인용부호(JSON 등)가 포함된 스크립트는 **전체를 Base64로 인코딩한 뒤 원격에서 디코딩하여 `bash`로 실행**한다 (`echo $b64 | base64 -d | bash`).
+
+## 4. 작업 기록 및 관리 (GitHub & Memory) — 모든 도구 공통
+
+모든 에이전트는 더 이상 Redmine을 사용하지 않으며, 아래의 **Task Execution Workflow**에 따라 GitHub Projects 및 Issues를 단일 소스(SSOT)로 활용합니다.
+
+1. **명령 인식 (Command Recognition)**: 사용자의 의도와 작업 범위를 명확히 파악합니다.
+2. **깃허브 이슈 확인 및 즉시 선점 (Check & Claim)**: 작업을 시작하기 전에 반드시 GitHub Project #2와 관련 저장소 이슈를 조회하여 동일/겹치는 작업이 이미 `In Progress`인지 확인합니다. 조회·클레임은 `~/msa/scripts/claim.sh <repo> <issue>` 한 줄로 수행한다(다른 세션이 잡고 있으면 스크립트가 막는다). 겹치는 항목이 없으면 **코드를 건드리기 전에** 해당 이슈를 만들거나 열어 Status를 `In Progress`로 즉시 전환합니다. **이 서버는 Claude Code/Codex/Antigravity 등 여러 AI 도구를 여러 세션으로 동시에 띄워 작업하는 환경이므로, "조회만 하고 착수 시점에 클레임하지 않는" 흐름으로는 다른 세션과 같은 소스/같은 작업이 겹칠 수 있다.** 조회 시 대상 항목이 이미 `In Progress`(특히 최근 갱신)이면 같은 작업을 새로 시작하지 말고 사용자에게 확인한다.
+3. **작업 수행 (Task Execution)**: 파악된 작업을 순차적으로 수행하며 필요한 코드를 수정하거나 작성합니다.
+4. **커밋 전 서브에이전트 검수 (Pre-commit Subagent Review)**: 코드를 커밋하기 전에 해당 레포지토리의 서브에이전트(또는 특화된 페르소나 규칙)를 활용하여 코드를 검수합니다.
+5. **검수 후 주석 및 커밋 메시지 표준화 작성 (Standardized Comments & Commit Message)**: 검수가 완료된 코드에 대해 표준화된 주석을 달고, 일관된 양식의 커밋 메시지를 작성합니다.
+6. **배포 (Deployment)**: 작성된 코드를 알맞은 파이프라인이나 환경으로 배포합니다.
+7. **배포 후 정상 동작 확인 (Post-deployment Verification)**: 배포가 완료된 후 시스템이 정상적으로 동작하는지 반드시 테스트하고 검증합니다.
+
+**지속적인 업데이트 (Continuous Updates)**: 위 과정을 진행하면서 진행 상황은 아래 §4-1 인계 프로토콜(`progress.sh`)로 이슈에 남깁니다. (예전 이 문단은 "내부 `task.md` 를 동기화하라"고 지시했으나, 그런 파일은 이 머신에 존재한 적이 없다 — 선언만 있고 실체가 없는 규칙이었으므로 제거했다.) 특히, **작업이 완전히 끝났을 때는 커밋 메시지(`Closes #이슈번호`)를 활용하거나 `gh issue close` 명령어를 통해 반드시 깃허브 이슈를 '완료(Closed)' 처리해야 합니다.**
+
+**세션 격리 (Worktree, Check & Claim의 보완책)**: Check & Claim은 "같은 작업"의 중복 착수를 막는 조치이고, 이것과 별개로 여러 세션(도구 무관)이 **같은 저장소**(`~/git/<repo>`)의 공용 클론을 동시에 건드리면 서로 다른 작업이어도 파일/브랜치가 물리적으로 충돌할 수 있다. 저장소 작업을 시작할 때는 공용 클론을 직접 건드리기보다 별도 worktree를 기본으로 삼는다.
+- Claude Code는 `EnterWorktree` 도구로 `.claude/worktrees/<repo>/<name>` 아래 자동 생성/전환한다 — 기본 경로를 그대로 쓴다.
+- Codex/Antigravity 등 자체 worktree 기능이 없는 도구는 `git worktree add ../<repo>-<slug> -b <branch>`로 수동 생성하고, 작업 종료 후 `git worktree remove`로 정리한다.
+- **각 저장소 `.gitignore`에 `.claude/worktrees/`가 반드시 있어야 한다.** 없으면 `git add -A`/`git add .` 한 번에 worktree 디렉터리 전체가 gitlink(모드 160000)로 커밋되어 origin까지 올라갈 수 있다 — 2026-08-21 `customer.front`에서 실제로 발생·이미 push된 상태로 확인됨(별도 정리 필요, 이 문서 편집만으로는 해결되지 않음).
+
+### 이슈를 어느 저장소에 만드나 (2026-08-22 신설)
+
+**판정 기준은 "이 일이 끝나면 어느 저장소에 커밋이 생기나" 하나다.**
+
+| 끝났을 때 생기는 것 | 저장소 |
+|---|---|
+| 특정 저장소에 커밋이 생긴다 | 그 저장소 (`auth.api`, `store.front`, `posselect-ui` …) |
+| `~/msa` 매니페스트·운영 변경이거나, 여러 저장소에 걸친 **실작업** | **`gateway`** (catch-all — `~/msa` 는 git 저장소가 아니라 이슈를 걸 곳이 없다) |
+| **커밋이 안 생긴다** — 기술/설계 도입 검토, 결정 문서, 장기 보류 | **`architecture`** + `long-term` 라벨 |
+
+- 세 번째 줄이 신설된 이유: 같은 성격의 항목(`[장기 개선] Kafka / ArgoCD / Vault / Playwright 도입` 등)이 `architecture#2~15` 14건과 `gateway#226·227` 로 **두 곳에 갈라져 등록되고 있었다.** 도입 검토는 `architecture` 한 곳으로 모은다. 새 저장소를 만들어 세 번째 집을 늘리지 말 것.
+- `architecture` 의 기존 라벨을 그대로 쓴다: `long-term` + `infrastructure` / `observability` / `testing` / `backend` / `frontend` / `security` / `ai-engineering`.
+- 검토 결과 **실제로 도입하기로 결정되면 그때 구현 이슈를 해당 저장소(또는 `gateway`)에 새로 만들고** 원래 검토 이슈는 닫는다. 검토 이슈를 구현 이슈로 개조하지 말 것 — 하나의 작업 단위 = 하나의 이슈.
+- 산출물이 조사·설계 문서뿐이면 **브랜치를 따지 않는다.** `~/msa/research/` 에 `.md` + 렌더링본 `.html` 로 쓰고 이슈에 링크한다(§2 "무거운 인프라는 도입하지 말고 기록만 한다"와 같은 취지). 실제 코드가 생기는 시점부터 이슈 1건 = 브랜치 1개 = worktree 1개.
+- **크로스레포 부모 에픽은 어느 저장소에 두든 `Closes #N` 으로 자동 종료되지 않는다** — GitHub 은 저장소 간 종료 키워드를 지원하지 않는다. 하위 작업이 끝나면 부모는 손으로 닫는다. (이건 저장소를 옮겨도 해결되지 않으므로, 이슈 이전의 근거가 될 수 없다.)
+
+## 4-1. 인계 프로토콜 — 다른 도구가 중간부터 이어받게 하기
+
+세 도구(Claude Code / Codex / Antigravity)가 **전부 같은 GitHub 계정으로 커밋**하므로 assignee·커밋 author 로는 누가 무엇을 잡고 있는지 구분되지 않는다. 진행 상태를 공유할 수 있는 매체는 **이슈 코멘트 하나뿐**이다. 도구별 메모리(예: Claude의 `~/.claude/projects/.../memory`)나 로컬 파일에 적으면 다른 도구는 영원히 못 읽는다.
+
+### 세션 시작 (도구 무관, 필수)
+
+```bash
+~/msa/scripts/session-start.sh      # 활성/스테일 클레임 + 저장소별 브랜치·미커밋·미푸시 상태
+```
+
+이 스크립트는 브리핑 전에 `sweep-claims.sh` 를 한 번 돌려 **죽은 세션이 잡아 둔 클레임을 먼저 회수**한다. 그래서 "🔒 잡혀 있음"이 실제로 살아 있는 세션만 가리킨다.
+
+Claude Code 는 SessionStart 훅이 자동 실행한다(로컬 모드). **훅이 없는 도구는 세션의 첫 명령으로 직접 실행할 것.**
+
+- Project #2 조회 결과는 세션 간 공유 캐시(기본 5분, `~/.cache/msa-agent/`)를 쓴다. `gh project` 계열은 전부
+  GraphQL 이고 REST 와 한도가 분리돼 있는데 이 머신은 세션이 10~15개 동시에 뜬다 — 캐시가 없으면
+  세션 시작 조회만으로 GraphQL 5000/hr 이 마른다(2026-08-21 실측: 58/5000 까지 떨어짐).
+- **"조회 실패"와 "진행 중 작업 없음"은 다르다.** 한도가 소진되면 스크립트가 실패를 명시하고 낡은 캐시라도
+  보여준다. 실패 표시가 뜨면 착수 전에 대상 이슈를 직접 열어 CLAIM 코멘트를 확인할 것 — 조회 실패를
+  "아무도 안 잡았다"로 읽으면 그대로 중복 착수다.
+
+### 코멘트 규격 (기계 판독용 첫 줄 + 사람이 읽는 본문)
+
+| 종류 | 언제 | 명령 |
+|------|------|------|
+| `CLAIM` | 코드를 건드리기 **전** | `~/msa/scripts/claim.sh <repo> <issue>` |
+| `PROGRESS` | 의미 있는 단위마다 | `~/msa/scripts/progress.sh <repo> <issue> "한 일\|다음 단계\|검증 방법"` |
+| `HANDOFF` | 중단하거나 끝낼 때 | `~/msa/scripts/handoff.sh <repo> <issue> "남은 일/위험" [--done]` |
+| `TAKEOVER` | 남의 스테일 클레임을 인수할 때 | `~/msa/scripts/claim.sh <repo> <issue> --takeover` |
+| `HANDOFF (auto)` | 세션이 죽어서 아무도 못 남길 때 | `~/msa/scripts/sweep-claims.sh` 가 자동 (크론 10분 + 세션 시작) |
+
+- 코멘트 첫 줄은 ```CLAIM tool=... branch=... started=...``` 형태로 고정된다. 손으로 쓰지 말고 스크립트를 쓸 것 — 포맷이 깨지면 다른 세션의 클레임 판정이 틀린다.
+- **실행 도구 식별은 자동이다 — 세션마다 뭘 설정할 필요 없다.** 스크립트가 `/proc` 조상 체인에서 이 셸을 띄운 주체(ccd-cli / codex / antigravity IDE 서버 …)를 찾아 판별한다. 환경변수는 자식으로 새기 때문에(Claude 세션 안에서 codex 를 띄우면 `CLAUDECODE` 를 물려받는다) 조상 체인을 먼저 본다.
+  - 판별 결과가 `unknown` 으로 남는 도구가 생기면, 그때마다 `AGENT_TOOL` 을 치지 말고 **`~/msa/scripts/lib/agent-protocol.sh` 의 `_agent_ancestry_scan()` 에 패턴 한 줄을 추가**한다(한 번만 하면 그 도구의 모든 세션에 적용된다).
+  - 일회성으로 다르게 기록해야 할 때만 `AGENT_TOOL=... ` 또는 `--tool` 로 덮어쓴다.
+
+### 클레임 상태 판정 (생존 우선, 2시간은 폴백)
+
+`session-start.sh` 와 `claim.sh` 가 보여주는 상태는 네 가지다.
+
+| 표시 | 뜻 | 인수 |
+|------|-----|------|
+| 🔒 `active` | 코멘트도 최신이고 세션 프로세스도 살아 있다 | 건드리지 말 것 |
+| 💀 `dead` | **세션 프로세스가 실제로 없다** | 시간 무관 즉시 인수 가능 |
+| 🟡 `stale` | 마지막 코멘트가 **2시간**(`MSA_CLAIM_STALE_SECONDS`) 초과, 로컬 레코드 없음 | 인수 가능 |
+| 🟡 `stale-alive` | 2시간 초과지만 프로세스는 살아 있다 | 인수 전 사용자에게 확인 |
+
+`claim.sh` 는 이슈 코멘트와 별개로 `~/.cache/msa-agent/claims/<repo>__<issue>.rec` 에 그 세션의 **도구 PID·시작시각·boot_id** 를 남긴다. 코멘트가 도구 간 공유 매체라면 이 파일은 "그 세션이 아직 살아 있는가"에 답하는 로컬 신호다 — 모든 도구가 같은 호스트의 프로세스로 뜨기 때문에 가능하다(PID 재사용은 시작시각으로, 재부팅은 boot_id 로 걸러낸다).
+
+**2시간 규칙은 없애지 않았다.** 레코드가 없는 옛 클레임·캐시가 지워진 경우·다른 머신에서 온 클레임은 여전히 이 규칙으로만 회수된다(2026-08-21 실측: In Progress 11건 중 클레임 기록이 있는 것 0건, 일부는 며칠째 정지).
+
+### 세션이 죽었을 때 (비정상 종료)
+
+`handoff.sh` 는 세션이 **스스로 부를 수 있을 때만** 동작한다. SIGKILL·크래시·터미널 강제 종료에서는 아무 기록도 남지 않는다. 그 공백을 `sweep-claims.sh` 가 메운다 — 크론 10분 주기 + 세션 시작 시 + (Claude 한정) SessionEnd 훅에서 돈다.
+
+죽은 클레임을 찾으면 순서대로:
+1. 작업물을 **wip 커밋 + push**(아래 규칙) — 인계 가능 상태로 만든다
+2. 이슈에 `HANDOFF ... auto=true` 코멘트(사유·브랜치·스냅샷 위치 포함)
+3. 로컬 레코드 삭제 → 다른 세션은 즉시 `--takeover` 로 이어받는다
+
+**자동 wip 스냅샷 규칙 — 이 제약들은 안전장치이므로 완화하지 말 것.**
+- `main`/`master` 에서는 **절대 커밋·push 하지 않는다**(main push = 즉시 프로덕션 배포). 미커밋 상태를 코멘트로 보고만 한다.
+- 같은 worktree 에서 **살아 있는 프로세스나 다른 클레임이 작업 중이면 커밋하지 않는다.** 공용 클론(`~/git/<repo>`)에서 `git add -A` 는 다른 세션의 미커밋 작업까지 삼켜 원격에 올려 버린다.
+- push 는 `--no-verify` 로 한다. 중단된 wip 코드는 `verify.sh` 를 통과하지 못하는 게 정상이고, 검증 실패로 스냅샷이 실패하면 보존이라는 목적 자체가 사라진다. wip 브랜치 push 는 워크플로를 하나도 트리거하지 않는다(전 저장소 트리거가 `push: [main]` + `pull_request` 뿐).
+- 직접 push 가 거부되면(non-fast-forward) `wip/auto/<branch>-<issue>` 로 우회 push 하고 코멘트에 그 이름을 적는다 — 남의 브랜치를 덮지 않는다.
+- 커밋 메시지에 **`[skip ci]` 를 넣지 않는다.** 본문에서도 인식되므로 그 브랜치가 나중에 머지될 때 배포가 조용히 건너뛰어진다.
+- 커밋 전 `git diff HEAD` 패치 사본을 `~/.cache/msa-agent/wip/` 에 남긴다(worktree 가 나중에 지워져도 복구 가능하게).
+
+**사후 회수는 보험이지 대체재가 아니다.** 위 제약 때문에 스냅샷이 포기되는 경우가 있으므로, 살아 있는 동안 스스로 push 하는 규칙(§ 인계 가능 = 원격에 push된 상태)이 여전히 1차 수단이다.
+
+### 인계 가능 = 원격에 push된 상태
+
+로컬 worktree 의 브랜치는 다른 도구·다른 세션 눈에 **보이지 않는다.** 작업을 중단할 때는 `wip:` 커밋이라도 push 한 뒤 `handoff.sh` 를 실행한다(미푸시 상태로 인계하려 하면 스크립트가 막는다). `--done` 없이 실행하면 Status 는 `In Progress` 로 남고 클레임만 반납되어, 다른 도구가 `--takeover` 로 바로 이어받는다.
+
+### 어디에 무엇을 쓰나
+
+| 내용 | 위치 |
+|------|------|
+| 진행 중 상태·다음 단계·인계 정보 | **이슈 코멘트**(위 프로토콜) |
+| 확정된 개발 규칙 | `~/msa/AGENTS.md` (이 문서) |
+| 사고 기록·ADR 등 장기 지식 | GitHub Wiki(gateway/order.api) |
+| 도메인 용어 사전(enum·필드·라벨의 기준) | GitHub Wiki gateway [Glossary](https://github.com/lee-dohyun/gateway/wiki/Glossary) — 저장소에 복제하지 않는다 |
+| 도구 자신의 작업 효율용 메모 | 각 도구의 메모리 — **다른 도구는 못 읽는다는 전제로만 사용** |
+
+**GitHub Wiki를 근거로 답할 때**: 출처(문서명/섹션)를 인용하고, Wiki에 근거가 없으면 지어내지 말고
+"근거 없음"이라고 답한다(gateway#227 검토 — 서드파티 지식관리 플러그인 대신 이 프롬프트 규칙으로
+대체). Wiki 자체의 정합성(깨진 링크·stale 문서)은 `~/msa/scripts/wiki-lint.sh`로 점검한다.
+
+## 4-2. 작업 라우팅 — 어느 도구가 무엇을 하나
+
+간단한 작업은 Antigravity 가 처리하고, 나머지는 Claude/Codex 가 맡는다. 표시는 **GitHub 라벨**로 한다.
+
+| 라벨 | 뜻 |
+|------|-----|
+| `agent: Antigravity` | 간단한 작업 — Antigravity 우선 |
+| `agent: Claude` / `agent: Codex` | 그 도구가 맡을 작업 |
+| (라벨 없음) | 아무 도구나 — **기본값이므로 대부분의 이슈는 라벨을 달 필요가 없다** |
+
+표시: `~/msa/scripts/mark-agent.sh <repo> <issue> antigravity|claude|codex|clear` 또는 GitHub UI 에서 라벨 클릭.
+
+### 다음 작업 고르기
+
+```bash
+~/msa/scripts/next-task.sh            # 우선순위대로 후보 나열 (+ 클레임 명령까지 출력)
+~/msa/scripts/next-task.sh --claim    # 1순위를 바로 클레임
+```
+
+우선순위: **① 내 도구 라벨 → ② 라벨 없음 → ③ 다른 도구 라벨**.
+
+- **③은 ①·②가 모두 비었을 때만 나온다(즉시 폴백).** 사용자 결정 사항이다: 안티그래비티 태그가 붙어 있어도
+  남은 게 그것뿐이면 다른 도구가 진행한다. **라벨은 우선권이지 소유권이 아니다** — 태그 때문에 도구가 노는 일은 없게 한다.
+- 폴백으로 진행해도 흔적은 남는다. `claim.sh` 가 `tool=` 을 기록하므로 "이 작업을 누가 왜 가져갔는지"가 이슈에 그대로 보인다.
+- 동시 착수를 막는 건 라벨이 아니라 **클레임 프로토콜**(§4-1)이다. 라벨만 보고 착수하지 말 것.
+- 조회는 전부 REST(`gh issue list`)다. `gh project` 는 GraphQL 이라 세션이 10~15개 뜨는 이 환경에서 먼저 마른다 —
+  라우팅에 Project 커스텀 필드를 쓰지 않고 라벨을 쓰는 이유다.
+
+## 5-1. 자동 점검 장치 — 도구 무관 (2026-08-21 배선, 같은 날 도구 무관화)
+
+규칙을 문서로만 선언하지 않고 실제로 강제하는 장치다. **어떤 AI 도구도 이 장치들을 우회하지 말 것** —
+우회하면 이 문서의 규칙이 다시 선언으로만 남는다.
+
+- **`<저장소>/scripts/verify.sh`** — push 전 검증의 **단일 진입점**. 스택을 자동 판별해
+  `./gradlew test` 또는 `npm run typecheck/lint/test` 를 돌리고, `scripts/verify.d/*.sh` 추가 검사를 실행한다.
+  문서·도구 설정만 바뀐 push 는 스스로 건너뛴다. 우회는 `MSA_SKIP_VERIFY=1`, 우회했다면 그 사실을 보고/이슈에 남길 것.
+  - 호출자 2곳이 **같은 스크립트**를 부른다: `.githooks/pre-push`(도구 무관) / `.claude/hooks/pre-push-verify.sh`(Claude).
+  - **CI 는 `verify.sh` 를 부르지 않는다**(2026-10-01 실측: Spring 4개 저장소 `.github/` 의 `verify.sh` 참조 0건, gateway#288). `pr-check.yml` 이 `pull_request` 에서만 `./gradlew test` 를 직접 돌린다 —
+    같은 테스트지만 `verify.d/*.sh` 추가 검사와 문서 전용 스킵은 없다. 따라서 훅이 없는 경로(훅 미설치 클론, `--no-verify`/`MSA_SKIP_VERIFY=1`, 웹 편집)로 **main 에 직접 push 하면 아무 검증도 걸리지 않고 곧 배포된다.**
+    CI 가 `verify.sh` 를 부르게 하는 것은 별도 결정 사항이다.
+  - `.githooks/pre-push` 는 클론마다 `~/msa/scripts/bootstrap-hooks.sh` 를 1회 돌려 `core.hooksPath` 를 걸어야 활성화된다
+    (이 설정은 커밋되지 않는 로컬 설정이다). **새 클론·새 머신에서 제일 먼저 할 일.**
+  - 2026-08-21 이전에는 검증이 `.claude/hooks/` 아래에만 있어 Claude 이외의 도구가 push 하면 아무 검증도 걸리지 않았다.
+- **`<저장소>/AGENTS.md` 의 `<!-- canon:begin -->` 블록** — 이 문서의 공통 규칙이 각 저장소에 주입된 사본이다.
+  `~/msa` 는 git 저장소가 아니라 저장소만 클론해 도는 도구(Codex, CI, IDE)는 원본을 읽을 수 없기 때문이다.
+  **손으로 고치지 말 것.** 규칙 변경은 이 문서를 고치고 `~/msa/scripts/sync-agents-canon.sh` 를 다시 돌린다
+  (`--check` 로 어긋난 저장소를 찾는다). `CLAUDE.md`/`GEMINI.md` 는 `AGENTS.md` 심링크다.
+- **`<저장소>/.claude/agents/*.md`** — 저장소별 가드(게이트웨이 화이트리스트, Flyway, 트랜잭션/멱등성,
+  캐시 무효화, 디자인 토큰, 셸 계약). Claude Code는 자동 위임하고, **다른 도구는 해당 파일을 읽어 같은 점검을 수행할 것.**
+- **결정적 검사 스크립트** — `check-token-mirror.sh`(posselect-ui), `check-i18n-keys.sh`/`check-mermaid.sh`
+  (architecture), `~/msa/scripts/check-architecture-drift.sh`, `~/msa/scripts/check-manifest-drift.sh`
+  (`~/msa/<디렉터리>/*.yaml` vs 라이브, 기본 `customer/`, gateway#230). LLM 없이 동작하므로 어떤 도구에서든
+  그냥 실행하면 된다. 두 드리프트 스크립트 모두 매주 월요일 09:00대 cron 으로 자동 실행되고
+  `~/msa/scripts/*.log` 에 쌓인다.
+- **CI** — 각 저장소 `pr-check.yml`(PR 단계 게이트), `claude-review.yml`(자동 리뷰, `ANTHROPIC_API_KEY` 필요).
+  단 `pr-check.yml` 은 `pull_request` 에서만 돈다 — **main 직push 는 CI 게이트가 없고 곧 배포다.**
+  그래서 push 전 검증은 `.githooks/pre-push` 가 유일한 방어선이다.
+
+작업 기록은 `msa-work-log` 스킬(Claude Code) 또는 `~/.claude/skills/msa-work-log/SKILL.md`(다른 도구는 이 파일을
+읽고 같은 절차 수행)를 따른다. **Project에 저장소 미연결 Draft issue를 만들지 말 것** — 2026-08-17 이관 때
+중복 카드 210여 건이 생긴 원인이다. 항상 실제 저장소 Issue를 만들어 Project #2에 연결한다.
