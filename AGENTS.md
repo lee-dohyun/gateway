@@ -61,7 +61,10 @@ gone and must not be reintroduced.
      and the front route. They are the 2026-08-14 mitigation for an external `POST /` leading to shell
      execution inside a Next.js container; the API routes above them keep login/orders working.
      `admin-front` is the exception — it handles its own `/api/**`, so it has an `admin-front-api`
-     carve-out before its block-write route. Moving any of these breaks either security or the app.
+     carve-out before its block-write route. `home.posselect.com` has one more carve-out above its
+     block-write route: `product-api-wishlist-home` (`/api/wishlists/**` → product-api, gateway#304) —
+     if it slips below, GET still works and only POST/DELETE 403, which `HomeWishlistRouteTest` pins.
+     Moving any of these breaks either security or the app.
   3. `cdn-alias` (`image.posselect.com` + `Path=/cdn/**`) must precede the imgproxy catch-all for the same
      host.
 - Two routes carry a `PreserveHostHeader` filter for a specific, non-obvious reason, both documented inline:
@@ -91,8 +94,10 @@ gone and must not be reintroduced.
    `application*.yml` via `GatewaySecurityProperties` (`protected-hosts`, `optional-auth-hosts`,
    `home-hosts`, `login-url`, `keycloak-issuer`, `keycloak-realm-url`), each overridable by a `SHOP_*`
    env var. Adding a protected domain is a config change, not a code change.
-1. `/api/auth/me` on a `home-hosts` or `protected-hosts` host, and every request to an
-   `optional-auth-hosts` host (`product.posselect.com`), take the **optional** path: the cookie is verified
+1. `/api/auth/me` on a `home-hosts` or `protected-hosts` host, `/api/wishlists` and `/api/wishlists/**`
+   on a `home-hosts` host (gateway#304 — path-scoped on purpose, so page requests to Next.js never carry
+   user headers), and every request to an `optional-auth-hosts` host (`product.posselect.com`), take the
+   **optional** path: the cookie is verified
    if present and headers injected, but a missing or invalid cookie passes through unauthenticated instead
    of redirecting. This is what lets the shared Header render a logged-out state on `/login` itself, and
    lets anonymous users browse products and a cart.
