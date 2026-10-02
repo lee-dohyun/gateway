@@ -50,6 +50,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String ACCESS_TOKEN_COOKIE = "ACCESS_TOKEN";
     private static final String HOME_AUTH_ME_PATH = "/api/auth/me";
+    private static final String HOME_WISHLIST_PATH = "/api/wishlists";
     /**
      * 백엔드(auth.api 등)가 신원 증명으로 신뢰하는 헤더들. 클라이언트가 이 이름 그대로 헤더를 실어
      * 보내면 JWT 검증 없이 신원을 위조할 수 있으므로, 아래 어떤 분기를 타든(공개 경로 통과, optional-auth
@@ -133,10 +134,24 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * 보호는 그대로 유지된다.
      */
     private boolean isOptionalAuthPath(String host, String path) {
-        if (!HOME_AUTH_ME_PATH.equals(path)) {
+        if (HOME_AUTH_ME_PATH.equals(path)) {
+            return properties.getHomeHosts().contains(host) || properties.getProtectedHosts().contains(host);
+        }
+        return isHomeWishlistPath(host, path);
+    }
+
+    /**
+     * 메인 페이지 상품 카드의 찜 하트(gateway#304). home 호스트는 protected host 가 아니라 기본은 검증 없이
+     * 통과인데, product.api 의 WishlistController 는 X-User-Id 를 필수로 요구한다. 호스트 전체를
+     * optional-auth-hosts 에 넣으면 Next.js 로 가는 모든 페이지 요청에까지 사용자 헤더가 실리므로
+     * 이 경로만 연다. 비로그인이면 헤더 없이 통과하고 product.api 가 400 을 돌려준다 — 프론트는 그걸
+     * "로그인 안 됨"으로 읽는다.
+     */
+    private boolean isHomeWishlistPath(String host, String path) {
+        if (!properties.getHomeHosts().contains(host)) {
             return false;
         }
-        return properties.getHomeHosts().contains(host) || properties.getProtectedHosts().contains(host);
+        return HOME_WISHLIST_PATH.equals(path) || path.startsWith(HOME_WISHLIST_PATH + "/");
     }
 
     private Mono<Void> attachUserHeadersIfPresent(ServerWebExchange exchange, GatewayFilterChain chain) {
