@@ -258,10 +258,12 @@ spring:
                  name: orderCircuitBreaker
                  fallbackUri: forward:/fallback
             uri: http://order-api.customer.svc.cluster.local:8080
+         # /api/auth/me/grade: 장바구니가 결제 전에 회원 등급 할인을 안내한다(gateway#81).
+         # 이 호스트는 optional-auth 라 비로그인 요청에는 X-User-Id 가 붙지 않고 auth.api 가 401 을 준다.
          -  id: auth-api-addresses-product
             predicates:
             - Host=product.posselect.com
-            - Path=/api/auth/addresses/**
+            - Path=/api/auth/addresses/**,/api/auth/me/grade
             uri: http://auth-api.customer.svc.cluster.local:8080
          # 2026-08-14 보안 사고 대응(Redmine msa #155): product-front도 자체 POST
          # 핸들러/Server Action이 없어(전부 product-api/order-api/auth-api-addresses-
