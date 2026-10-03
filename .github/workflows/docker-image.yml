@@ -76,6 +76,19 @@ jobs:
         with:
           sarif_file: "trivy-results.sarif"
 
+      # 배포 게이트(gateway#247): 수정본이 나와 있는 CRITICAL 이 이미지에 있으면 여기서 멈춘다 - deploy 잡이 돌지 않는다.
+      # 위 보고 단계와 나눈 이유: severity 를 좁히면 SARIF 에서 HIGH·MEDIUM 이 빠져 Code Scanning 에서 안 보인다.
+      # ignore-unfixed 를 끄지 말 것 - 수정본 없는 CVE 가 배포를 무기한 막는다.
+      - name: Gate on fixable CRITICAL vulnerabilities
+        if: github.event_name == 'push'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+          format: "table"
+          severity: "CRITICAL"
+          ignore-unfixed: true
+          exit-code: "1"
+
   deploy:
     needs: build
     runs-on: [self-hosted, k3s-home]
