@@ -36,6 +36,15 @@ spring:
          port: 6379
    cloud:
       gateway:
+         # Spring Cloud Gateway 4.3(2025.0)부터 X-Forwarded-*/Forwarded 헤더는 **여기 적힌 주소에서 온 요청에만**
+         # 붙여서 백엔드로 넘긴다. 비워 두면 전부 떼어 버린다 - 그러면 Keycloak 이 토큰 엔드포인트를 내부 주소
+         # (http://keycloak-service...)로 내보내고 WordPress 가 http:// 링크를 섞어 낸다(gateway#247 업그레이드
+         # 대조에서 실측). 게이트웨이에 직접 붙는 건 Traefik 파드뿐이라 파드 대역을 적는다. 이전 버전은 모든
+         # 주소를 믿었으므로 이 값은 그보다 넓어지지 않는다. 라우트는 아직 옛 접두사(spring.cloud.gateway.routes)에
+         # 있고 기동 때 새 접두사로 옮겨 읽힌다 - 이 키는 새 접두사에만 있다.
+         server:
+            webflux:
+               trusted-proxies: '10\.42\.\d+\.\d+'
          routes:
          -  id: tool
             predicates:
