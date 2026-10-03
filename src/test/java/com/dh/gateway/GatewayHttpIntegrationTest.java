@@ -63,7 +63,9 @@ import reactor.netty.http.server.HttpServer;
                 // 8081 고정이면 같은 머신에서 동시에 도는 다른 테스트 JVM 과 포트가 부딪친다.
                 "management.server.port=0",
                 "spring.data.redis.host=localhost",
-                "spring.data.redis.port=1"
+                "spring.data.redis.port=1",
+                // 운영 값은 Traefik 파드 대역이다. 테스트 클라이언트는 루프백에서 붙으므로 그 주소를 더한다.
+                "spring.cloud.gateway.server.webflux.trusted-proxies=127\\.0\\.0\\.1|0:0:0:0:0:0:0:1|::1"
         })
 class GatewayHttpIntegrationTest {
 
@@ -310,6 +312,21 @@ class GatewayHttpIntegrationTest {
                 .jsonPath("$.method").isEqualTo("POST")
                 .jsonPath("$.headers['x-test-upstream']").isEqualTo("product-api.customer.svc.cluster.local")
                 .jsonPath("$.headers['x-user-id']").isEqualTo("user-sub-1");
+    }
+
+    @Test
+    void 프록시가_붙인_전달_헤더는_백엔드까지_전해진다() {
+        // Keycloak·WordPress 는 이 헤더로 자기 바깥 주소를 만든다. Spring Cloud Gateway 4.3 은 trusted-proxies 가
+        // 비면 이 헤더를 전부 떼는데, 그래도 다른 테스트는 전부 통과했다(gateway#247 에서 운영 이미지 대조로 발견).
+        client.get().uri("/realms/customer/.well-known/openid-configuration")
+                .header("Host", "keycloak.posselect.com")
+                .header("X-Forwarded-Proto", "https")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.headers['x-test-upstream']").isEqualTo("keycloak-service.keycloak.svc.cluster.local")
+                .jsonPath("$.headers['x-forwarded-host']").isEqualTo("keycloak.posselect.com")
+                .jsonPath("$.headers['x-forwarded-proto']").value(org.hamcrest.Matchers.startsWith("https"));
     }
 
     @Test
