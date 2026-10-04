@@ -40,367 +40,369 @@ spring:
          # 붙여서 백엔드로 넘긴다. 비워 두면 전부 떼어 버린다 - 그러면 Keycloak 이 토큰 엔드포인트를 내부 주소
          # (http://keycloak-service...)로 내보내고 WordPress 가 http:// 링크를 섞어 낸다(gateway#247 업그레이드
          # 대조에서 실측). 게이트웨이에 직접 붙는 건 Traefik 파드뿐이라 파드 대역을 적는다. 이전 버전은 모든
-         # 주소를 믿었으므로 이 값은 그보다 넓어지지 않는다. 라우트는 아직 옛 접두사(spring.cloud.gateway.routes)에
-         # 있고 기동 때 새 접두사로 옮겨 읽힌다 - 이 키는 새 접두사에만 있다.
+         # 주소를 믿었으므로 이 값은 그보다 넓어지지 않는다.
+         #
+         # 게이트웨이 설정은 전부 spring.cloud.gateway.server.webflux 아래에 둔다(gateway#314). 4.3 에서 옛 접두사
+         # spring.cloud.gateway.* 는 지원 종료 예고됐고 다음 메이저에서 없어진다 - 라우트를 옛 자리에 추가하지 말 것.
          server:
             webflux:
                trusted-proxies: '10\.42\.\d+\.\d+'
-         routes:
-         -  id: tool
-            predicates:
-            - Host=tool.leedohyun.com
-            uri: http://tool-service.tool.svc.cluster.local:80
-         # tool.posselect.com = PosSelect 개발자 도구 모음 (저장소 lee-dohyun/tool.front).
-         # 위 tool.leedohyun.com(개인 유틸 사이트)과 같은 네임스페이스에 있지만 별개 서비스다 —
-         # 백엔드 Service 이름이 다르므로 두 라우트를 합치지 말 것.
-         # 인증 없음(공개): protected-hosts 에 넣지 않는다. 링크되는 도구들은 각자 자체 로그인이 있다.
-         -  id: posselect-tool
-            predicates:
-            - Host=tool.posselect.com
-            uri: http://posselect-tool-service.tool.svc.cluster.local:80
-         -  id: root-redirect
-            predicates:
-            - Host=leedohyun.com,www.leedohyun.com
-            filters:
-            - RedirectTo=302, https://architecture.leedohyun.com
-            uri: no://op
-         -  id: shop-root-redirect
-            predicates:
-            - Host=posselect.com
-            filters:
-            - RedirectTo=302, https://www.posselect.com
-            uri: no://op
-         -  id: shop-customer-redirect
-            predicates:
-            - Host=customer.leedohyun.com
-            filters:
-            - RedirectTo=302, https://customer.posselect.com
-            uri: no://op
-         -  id: shop-home-redirect
-            predicates:
-            - Host=home.leedohyun.com
-            filters:
-            - RedirectTo=302, https://home.posselect.com
-            uri: no://op
-         -  id: shop-product-redirect
-            predicates:
-            - Host=product.leedohyun.com
-            filters:
-            - RedirectTo=302, https://product.posselect.com
-            uri: no://op
-         -  id: shop-admin-redirect
-            predicates:
-            - Host=admin.leedohyun.com
-            filters:
-            - RedirectTo=302, https://admin.posselect.com
-            uri: no://op
-         -  id: shop-keycloak-redirect
-            predicates:
-            - Host=keycloak.leedohyun.com
-            filters:
-            - RedirectTo=302, https://keycloak.posselect.com
-            uri: no://op
-         -  id: wordpress
-            predicates:
-            - Host=blog.leedohyun.com,wordpress.leedohyun.com
-            uri: http://wordpress-service:80
-         -  id: minio-api
-            predicates:
-            - Host=static.leedohyun.com
-            uri: http://minio.minio.svc.cluster.local:9000
-         -  id: minio-console
-            predicates:
-            - Host=minio.leedohyun.com,minio.posselect.com
-            filters:
-            - SetRequestHeader=Host, minio.leedohyun.com
-            - RemoveRequestHeader=Origin
-            uri: http://minio-console.minio.svc.cluster.local:9001
-         -  id: shop-static-assets
-            predicates:
-            - Host=static.posselect.com
-            uri: http://minio.minio.svc.cluster.local:9000
-         -  id: cdn-alias
-            predicates:
-            - Host=image.posselect.com
-            - Path=/cdn/**
-            uri: http://cdn-alias-service.minio.svc.cluster.local:80
-         -  id: shop-image-proxy
-            predicates:
-            - Host=image.posselect.com
-            uri: http://imgproxy-service.minio.svc.cluster.local:8080
-         -  id: keycloak
-            predicates:
-            - Host=keycloak.posselect.com
-            uri: http://keycloak-service.keycloak.svc.cluster.local:80
-         -  id: architecture
-            predicates:
-            - Host=architecture.leedohyun.com,architecture.posselect.com
-            uri: http://architecture-web-service.default.svc.cluster.local:80
-         -  id: auth-api
-            predicates:
-            - Host=customer.posselect.com
-            - Path=/api/auth/**
-            filters:
-            - name: RequestRateLimiter
-              args:
-                 redis-rate-limiter.replenishRate: 10
-                 redis-rate-limiter.burstCapacity: 20
-                 key-resolver: "#{@ipKeyResolver}"
-            - name: CircuitBreaker
-              args:
-                 name: authCircuitBreaker
-                 fallbackUri: forward:/fallback
-            uri: http://auth-api.customer.svc.cluster.local:8080
-         -  id: order-api-customer
-            predicates:
-            - Host=customer.posselect.com
-            - Path=/api/orders/**
-            filters:
-            - AddRequestHeader=X-Channel, 1
-            - name: RequestRateLimiter
-              args:
-                 redis-rate-limiter.replenishRate: 20
-                 redis-rate-limiter.burstCapacity: 50
-                 key-resolver: "#{@userKeyResolver}"
-            - name: CircuitBreaker
-              args:
-                 name: orderCircuitBreaker
-                 fallbackUri: forward:/fallback
-            uri: http://order-api.customer.svc.cluster.local:8080
-         # 마이페이지의 찜 목록이 이 호스트에서 /api/wishlists 를 호출한다(product.api 가 처리).
-         # customer.posselect.com 은 protected host 라 이 경로는 로그인이 강제되고, 게이트웨이가
-         # 검증 후 X-User-Id 를 주입한다 — product.api 의 WishlistController 가 이 헤더를 필수로 요구.
-         # 반드시 아래 customer-front-block-write 보다 앞에 있어야 DELETE 가 403 으로 막히지 않는다(#210).
-         -  id: product-api-wishlist-customer
-            predicates:
-            - Host=customer.posselect.com
-            - Path=/api/wishlists/**
-            filters:
-            - AddRequestHeader=X-Channel, 1
-            - name: RequestRateLimiter
-              args:
-                 redis-rate-limiter.replenishRate: 20
-                 redis-rate-limiter.burstCapacity: 50
-                 key-resolver: "#{@userKeyResolver}"
-            - name: CircuitBreaker
-              args:
-                 name: productCircuitBreaker
-                 fallbackUri: forward:/fallback
-            uri: http://product-api.customer.svc.cluster.local:8080
-         # 2026-08-14 보안 사고 대응(Redmine msa #155): customer-front도 store-front와
-         # 마찬가지로 자체 POST 라우트 핸들러/Server Action이 전혀 없어(전부 auth-api/
-         # order-api-customer가 처리) 같은 완화책 적용. /api/auth/**, /api/orders/**,
-         # /api/wishlists/** 는 위 라우트들이 먼저 채가므로 영향 없음.
-         -  id: customer-front-block-write
-            predicates:
-            - Host=customer.posselect.com
-            - Method=POST,PUT,PATCH,DELETE
-            filters:
-            - SetStatus=403
-            uri: no://op
-         -  id: customer-front
-            predicates:
-            - Host=customer.posselect.com
-            # PreserveHostHeader: /terms, /privacy SSR이 headers().get("host")로 자기 호스트를
-            # 재구성해 https://<host>/api/agreements로 되돌아온다(protocol은 host가
-            # "localhost"를 포함하지 않으면 무조건 https로 판단). 이 필터가 없으면 Host가
-            # 라우트 대상(customer-front.customer.svc.cluster.local:3000, 평문 3000 포트)으로
-            # 재작성되어 그 주소에 TLS를 시도 -> "wrong version number"로 500. 2026-08-20 발견.
-            filters:
-            - PreserveHostHeader
-            uri: http://customer-front.customer.svc.cluster.local:3000
-         -  id: auth-api-home
-            predicates:
-            - Host=home.posselect.com,www.posselect.com
-            - Path=/api/auth/**
-            uri: http://auth-api.customer.svc.cluster.local:8080
-         # 메인 페이지 상품 카드의 찜 하트가 이 호스트에서 /api/wishlists/** 를 호출한다(gateway#304).
-         # 아래 store-front-block-write 의 "재검토 트리거 ①"대로, 차단 규칙은 그대로 두고 이 경로만
-         # 앞에 허용 라우트로 둔다 — 순서가 뒤집히면 GET 은 되는데 POST/DELETE 만 403 이 된다
-         # (HomeWishlistRouteTest 가 순서를 고정한다). 이 요청은 Next.js(store-front)가 아니라
-         # product-api 로 가므로 차단 규칙이 막으려던 대상(앱이 받을 이유가 없는 쓰기)이 아니다.
-         # X-User-Id 는 JwtAuthenticationFilter 가 이 경로에 한해 쿠키를 검증해 주입한다(선택 인증).
-         -  id: product-api-wishlist-home
-            predicates:
-            - Host=home.posselect.com,www.posselect.com
-            - Path=/api/wishlists/**
-            filters:
-            - AddRequestHeader=X-Channel, 1
-            - name: RequestRateLimiter
-              args:
-                 redis-rate-limiter.replenishRate: 20
-                 redis-rate-limiter.burstCapacity: 50
-                 key-resolver: "#{@userKeyResolver}"
-            - name: CircuitBreaker
-              args:
-                 name: productCircuitBreaker
-                 fallbackUri: forward:/fallback
-            uri: http://product-api.customer.svc.cluster.local:8080
-         # home.posselect.com / www.posselect.com 쓰기 메서드 상시 차단 (심층방어).
-         # 이 호스트는 정적 랜딩이라 /api/auth/** 외엔 쓰기성 요청이 정상 트래픽에 없다.
-         # 2026-08-14 외부 POST / 가 컨테이너 내 셸 실행(curl)으로 이어지는 정황이 확인되어
-         # (Redmine msa #155) 임시로 넣었으나, 근본 원인(Next.js)이 패치된 뒤에도 앱이
-         # 받을 이유가 없는 요청을 앞단에서 끊는 편이 안전하므로 유지한다(gateway#291).
-         # auth-api-home 라우트가 위에서 /api/auth/**를 먼저 채가므로 로그인/회원가입/
-         # 프로필 수정에는 영향 없음. www.posselect.com 도 같은 보호를 적용한다.
-         # 재검토 트리거: ① store-front 에 서버 액션/쓰기 route handler 를 추가할 때 —
-         # 이 규칙을 지우지 말고 해당 경로만 위에 허용 라우트로 추가할 것.
-         # ② Traefik 뒤 ClientHost 가 SNAT(10.42.0.1)로만 보이는 문제를 해결할 때.
-         -  id: store-front-block-write
-            predicates:
-            - Host=home.posselect.com,www.posselect.com
-            - Method=POST,PUT,PATCH,DELETE
-            filters:
-            - SetStatus=403
-            uri: no://op
-         -  id: store-front
-            predicates:
-            - Host=home.posselect.com,www.posselect.com
-            uri: http://store-front.customer.svc.cluster.local:3000
-         -  id: product-api
-            predicates:
-            - Host=product.posselect.com
-            - Path=/api/products/**,/api/categories/**,/api/cart/**,/api/wishlists/**
-            filters:
-            - AddRequestHeader=X-Channel, 1
-            - name: RequestRateLimiter
-              args:
-                 redis-rate-limiter.replenishRate: 50
-                 redis-rate-limiter.burstCapacity: 100
-                 key-resolver: "#{@userKeyResolver}"
-            - name: CircuitBreaker
-              args:
-                 name: productCircuitBreaker
-                 fallbackUri: forward:/fallback
-            uri: http://product-api.customer.svc.cluster.local:8080
-         -  id: order-api
-            predicates:
-            - Host=product.posselect.com
-            - Path=/api/orders/**
-            filters:
-            - AddRequestHeader=X-Channel, 1
-            - name: RequestRateLimiter
-              args:
-                 redis-rate-limiter.replenishRate: 20
-                 redis-rate-limiter.burstCapacity: 50
-                 key-resolver: "#{@userKeyResolver}"
-            - name: CircuitBreaker
-              args:
-                 name: orderCircuitBreaker
-                 fallbackUri: forward:/fallback
-            uri: http://order-api.customer.svc.cluster.local:8080
-         # /api/auth/me/grade: 장바구니가 결제 전에 회원 등급 할인을 안내한다(gateway#81).
-         # 이 호스트는 optional-auth 라 비로그인 요청에는 X-User-Id 가 붙지 않고 auth.api 가 401 을 준다.
-         -  id: auth-api-addresses-product
-            predicates:
-            - Host=product.posselect.com
-            - Path=/api/auth/addresses/**,/api/auth/me/grade
-            uri: http://auth-api.customer.svc.cluster.local:8080
-         # 2026-08-14 보안 사고 대응(Redmine msa #155): product-front도 자체 POST
-         # 핸들러/Server Action이 없어(전부 product-api/order-api/auth-api-addresses-
-         # product가 처리) 같은 완화책 적용.
-         -  id: product-front-block-write
-            predicates:
-            - Host=product.posselect.com
-            - Method=POST,PUT,PATCH,DELETE
-            filters:
-            - SetStatus=403
-            uri: no://op
-         -  id: product-front
-            predicates:
-            - Host=product.posselect.com
-            uri: http://product-front.customer.svc.cluster.local:3000
-         # 2026-08-14 보안 사고 대응(Redmine msa #155): admin-front는 다른 프론트와
-         # 달리 /api/admin/**, /api/login 등을 게이트웨이 라우트 분리 없이 자기 자신이
-         # 직접 처리한다. 그래서 store-front 방식대로 통째로 막으면 관리자 로그인/상품
-         # 관리 기능이 깨진다. /api/** 는 이 carve-out으로 먼저 통과시키고, 그 외
-         # 경로(페이지 라우트)로 오는 쓰기성 요청만 차단한다.
-         -  id: admin-front-api
-            predicates:
-            - Host=admin.posselect.com
-            - Path=/api/**
-            uri: http://admin-front.customer.svc.cluster.local:3000
-         -  id: admin-front-block-write
-            predicates:
-            - Host=admin.posselect.com
-            - Method=POST,PUT,PATCH,DELETE
-            filters:
-            - SetStatus=403
-            uri: no://op
-         -  id: admin-front
-            predicates:
-            - Host=admin.posselect.com
-            uri: http://admin-front.customer.svc.cluster.local:3000
-         # partner.posselect.com = 파트너센터(외부 판매자 상품 등록, lee-dohyun/partner.front, gateway#279).
-         # admin-front 와 같은 BFF 패턴 — /api/** 는 앱 자신의 route handler(로그인·중계·업로드)가 받고,
-         # 그 외 페이지 경로로 오는 쓰기 요청은 막는다. protected-hosts 에 넣지 않는다: 인증은 partner realm
-         # 토큰으로 partner-front middleware 와 product.api 가 각각 직접 검증한다(게이트웨이 헤더 신뢰 금지).
-         -  id: partner-front-api
-            predicates:
-            - Host=partner.posselect.com
-            - Path=/api/**
-            uri: http://partner-front.customer.svc.cluster.local:3000
-         -  id: partner-front-block-write
-            predicates:
-            - Host=partner.posselect.com
-            - Method=POST,PUT,PATCH,DELETE
-            filters:
-            - SetStatus=403
-            uri: no://op
-         -  id: partner-front
-            predicates:
-            - Host=partner.posselect.com
-            uri: http://partner-front.customer.svc.cluster.local:3000
-         -  id: monitoring-redirect
-            predicates:
-            - Host=monitoring.leedohyun.com
-            filters:
-            - RedirectTo=302, https://monitoring.posselect.com
-            uri: no://op
-         -  id: monitoring
-            predicates:
-            - Host=monitoring.posselect.com
-            uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
-            filters:
-            - PreserveHostHeader
-         # storybook.posselect.com/shell/** → posselect-shell의 Storybook 정적 빌드(/storybook/**).
-         #
-         # 디자인 시스템 문서는 저장소가 둘이라 Storybook 빌드도 둘인데(posselect-ui = 프리미티브,
-         # posselect-shell = Header/Footer), posselect-ui의 .storybook/main.ts가 Storybook
-         # Composition(refs)으로 shell 쪽을 사이드바에 끌어와 **한 사이트로 보이게** 하는 설계다
-         # (posselect-shell#13에서 채택). 그런데 composition은 매니저가 브라우저에서 ref의
-         # index.json을 fetch하므로, ref가 다른 호스트(shell.posselect.com)면 크로스 오리진이라
-         # CORS 헤더 없이는 차단된다 — 실제로 차단돼서 허브 사이드바에 "No stories found"만
-         # 떴다(2026-08-23 실측: TypeError: Failed to fetch).
-         #
-         # shell의 nginx에 Access-Control-Allow-Origin을 다는 대신 **같은 오리진으로 묶어**
-         # CORS 문제 자체를 없앤다 — 이 클러스터의 단일 진입점 원칙과도 맞고, 헤더 관리 지점이
-         # 늘지 않는다. shell Storybook 빌드의 에셋 참조가 전부 상대경로(./assets/…, ./sb-manager/…)라
-         # 경로 프리픽스를 바꿔도 깨지지 않는 것을 확인했다.
-         #
-         # 아래 posselect-ui 라우트보다 **반드시 앞에** 있어야 한다 — Host만 보는 그 라우트가
-         # 먼저 매치되면 /shell/**이 posselect-ui로 가버린다.
-         -  id: posselect-shell-storybook-ref
-            predicates:
-            - Host=storybook.posselect.com
-            - Path=/shell/**
-            filters:
-            - RewritePath=/shell/?(?<seg>.*), /storybook/$\{seg}
-            uri: http://posselect-shell-service.default.svc.cluster.local:80
-         # ui.posselect.com과 storybook.posselect.com은 같은 서비스(디자인 시스템 문서
-         # 사이트 = Storybook 정적 빌드)를 가리키는 두 진입점이다. ui.* 가 원래 이름이라
-         # 기존 링크/북마크 호환을 위해 유지하고, storybook.* 을 별칭으로 추가했다.
-         -  id: posselect-ui
-            predicates:
-            - Host=ui.posselect.com,storybook.posselect.com
-            uri: http://posselect-ui-service.default.svc.cluster.local:80
-         -  id: posselect-shell
-            predicates:
-            - Host=shell.posselect.com
-            uri: http://posselect-shell-service.default.svc.cluster.local:80
-         # router-admin(router.leedohyun.com → ASUS 관리페이지 프록시)은 제거했다(gateway#277).
-         # 인증 없이 라우터 로그인 페이지를 인터넷에 노출하고 Origin/Referer 위조로 CSRF 검사까지
-         # 우회하고 있었다. 라우터 관리는 LAN(192.168.50.1)에서만 할 것 — 다시 추가하지 말 것.
+               routes:
+               -  id: tool
+                  predicates:
+                  - Host=tool.leedohyun.com
+                  uri: http://tool-service.tool.svc.cluster.local:80
+               # tool.posselect.com = PosSelect 개발자 도구 모음 (저장소 lee-dohyun/tool.front).
+               # 위 tool.leedohyun.com(개인 유틸 사이트)과 같은 네임스페이스에 있지만 별개 서비스다 —
+               # 백엔드 Service 이름이 다르므로 두 라우트를 합치지 말 것.
+               # 인증 없음(공개): protected-hosts 에 넣지 않는다. 링크되는 도구들은 각자 자체 로그인이 있다.
+               -  id: posselect-tool
+                  predicates:
+                  - Host=tool.posselect.com
+                  uri: http://posselect-tool-service.tool.svc.cluster.local:80
+               -  id: root-redirect
+                  predicates:
+                  - Host=leedohyun.com,www.leedohyun.com
+                  filters:
+                  - RedirectTo=302, https://architecture.leedohyun.com
+                  uri: no://op
+               -  id: shop-root-redirect
+                  predicates:
+                  - Host=posselect.com
+                  filters:
+                  - RedirectTo=302, https://www.posselect.com
+                  uri: no://op
+               -  id: shop-customer-redirect
+                  predicates:
+                  - Host=customer.leedohyun.com
+                  filters:
+                  - RedirectTo=302, https://customer.posselect.com
+                  uri: no://op
+               -  id: shop-home-redirect
+                  predicates:
+                  - Host=home.leedohyun.com
+                  filters:
+                  - RedirectTo=302, https://home.posselect.com
+                  uri: no://op
+               -  id: shop-product-redirect
+                  predicates:
+                  - Host=product.leedohyun.com
+                  filters:
+                  - RedirectTo=302, https://product.posselect.com
+                  uri: no://op
+               -  id: shop-admin-redirect
+                  predicates:
+                  - Host=admin.leedohyun.com
+                  filters:
+                  - RedirectTo=302, https://admin.posselect.com
+                  uri: no://op
+               -  id: shop-keycloak-redirect
+                  predicates:
+                  - Host=keycloak.leedohyun.com
+                  filters:
+                  - RedirectTo=302, https://keycloak.posselect.com
+                  uri: no://op
+               -  id: wordpress
+                  predicates:
+                  - Host=blog.leedohyun.com,wordpress.leedohyun.com
+                  uri: http://wordpress-service:80
+               -  id: minio-api
+                  predicates:
+                  - Host=static.leedohyun.com
+                  uri: http://minio.minio.svc.cluster.local:9000
+               -  id: minio-console
+                  predicates:
+                  - Host=minio.leedohyun.com,minio.posselect.com
+                  filters:
+                  - SetRequestHeader=Host, minio.leedohyun.com
+                  - RemoveRequestHeader=Origin
+                  uri: http://minio-console.minio.svc.cluster.local:9001
+               -  id: shop-static-assets
+                  predicates:
+                  - Host=static.posselect.com
+                  uri: http://minio.minio.svc.cluster.local:9000
+               -  id: cdn-alias
+                  predicates:
+                  - Host=image.posselect.com
+                  - Path=/cdn/**
+                  uri: http://cdn-alias-service.minio.svc.cluster.local:80
+               -  id: shop-image-proxy
+                  predicates:
+                  - Host=image.posselect.com
+                  uri: http://imgproxy-service.minio.svc.cluster.local:8080
+               -  id: keycloak
+                  predicates:
+                  - Host=keycloak.posselect.com
+                  uri: http://keycloak-service.keycloak.svc.cluster.local:80
+               -  id: architecture
+                  predicates:
+                  - Host=architecture.leedohyun.com,architecture.posselect.com
+                  uri: http://architecture-web-service.default.svc.cluster.local:80
+               -  id: auth-api
+                  predicates:
+                  - Host=customer.posselect.com
+                  - Path=/api/auth/**
+                  filters:
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 10
+                       redis-rate-limiter.burstCapacity: 20
+                       key-resolver: "#{@ipKeyResolver}"
+                  - name: CircuitBreaker
+                    args:
+                       name: authCircuitBreaker
+                       fallbackUri: forward:/fallback
+                  uri: http://auth-api.customer.svc.cluster.local:8080
+               -  id: order-api-customer
+                  predicates:
+                  - Host=customer.posselect.com
+                  - Path=/api/orders/**
+                  filters:
+                  - AddRequestHeader=X-Channel, 1
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 20
+                       redis-rate-limiter.burstCapacity: 50
+                       key-resolver: "#{@userKeyResolver}"
+                  - name: CircuitBreaker
+                    args:
+                       name: orderCircuitBreaker
+                       fallbackUri: forward:/fallback
+                  uri: http://order-api.customer.svc.cluster.local:8080
+               # 마이페이지의 찜 목록이 이 호스트에서 /api/wishlists 를 호출한다(product.api 가 처리).
+               # customer.posselect.com 은 protected host 라 이 경로는 로그인이 강제되고, 게이트웨이가
+               # 검증 후 X-User-Id 를 주입한다 — product.api 의 WishlistController 가 이 헤더를 필수로 요구.
+               # 반드시 아래 customer-front-block-write 보다 앞에 있어야 DELETE 가 403 으로 막히지 않는다(#210).
+               -  id: product-api-wishlist-customer
+                  predicates:
+                  - Host=customer.posselect.com
+                  - Path=/api/wishlists/**
+                  filters:
+                  - AddRequestHeader=X-Channel, 1
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 20
+                       redis-rate-limiter.burstCapacity: 50
+                       key-resolver: "#{@userKeyResolver}"
+                  - name: CircuitBreaker
+                    args:
+                       name: productCircuitBreaker
+                       fallbackUri: forward:/fallback
+                  uri: http://product-api.customer.svc.cluster.local:8080
+               # 2026-08-14 보안 사고 대응(Redmine msa #155): customer-front도 store-front와
+               # 마찬가지로 자체 POST 라우트 핸들러/Server Action이 전혀 없어(전부 auth-api/
+               # order-api-customer가 처리) 같은 완화책 적용. /api/auth/**, /api/orders/**,
+               # /api/wishlists/** 는 위 라우트들이 먼저 채가므로 영향 없음.
+               -  id: customer-front-block-write
+                  predicates:
+                  - Host=customer.posselect.com
+                  - Method=POST,PUT,PATCH,DELETE
+                  filters:
+                  - SetStatus=403
+                  uri: no://op
+               -  id: customer-front
+                  predicates:
+                  - Host=customer.posselect.com
+                  # PreserveHostHeader: /terms, /privacy SSR이 headers().get("host")로 자기 호스트를
+                  # 재구성해 https://<host>/api/agreements로 되돌아온다(protocol은 host가
+                  # "localhost"를 포함하지 않으면 무조건 https로 판단). 이 필터가 없으면 Host가
+                  # 라우트 대상(customer-front.customer.svc.cluster.local:3000, 평문 3000 포트)으로
+                  # 재작성되어 그 주소에 TLS를 시도 -> "wrong version number"로 500. 2026-08-20 발견.
+                  filters:
+                  - PreserveHostHeader
+                  uri: http://customer-front.customer.svc.cluster.local:3000
+               -  id: auth-api-home
+                  predicates:
+                  - Host=home.posselect.com,www.posselect.com
+                  - Path=/api/auth/**
+                  uri: http://auth-api.customer.svc.cluster.local:8080
+               # 메인 페이지 상품 카드의 찜 하트가 이 호스트에서 /api/wishlists/** 를 호출한다(gateway#304).
+               # 아래 store-front-block-write 의 "재검토 트리거 ①"대로, 차단 규칙은 그대로 두고 이 경로만
+               # 앞에 허용 라우트로 둔다 — 순서가 뒤집히면 GET 은 되는데 POST/DELETE 만 403 이 된다
+               # (HomeWishlistRouteTest 가 순서를 고정한다). 이 요청은 Next.js(store-front)가 아니라
+               # product-api 로 가므로 차단 규칙이 막으려던 대상(앱이 받을 이유가 없는 쓰기)이 아니다.
+               # X-User-Id 는 JwtAuthenticationFilter 가 이 경로에 한해 쿠키를 검증해 주입한다(선택 인증).
+               -  id: product-api-wishlist-home
+                  predicates:
+                  - Host=home.posselect.com,www.posselect.com
+                  - Path=/api/wishlists/**
+                  filters:
+                  - AddRequestHeader=X-Channel, 1
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 20
+                       redis-rate-limiter.burstCapacity: 50
+                       key-resolver: "#{@userKeyResolver}"
+                  - name: CircuitBreaker
+                    args:
+                       name: productCircuitBreaker
+                       fallbackUri: forward:/fallback
+                  uri: http://product-api.customer.svc.cluster.local:8080
+               # home.posselect.com / www.posselect.com 쓰기 메서드 상시 차단 (심층방어).
+               # 이 호스트는 정적 랜딩이라 /api/auth/** 외엔 쓰기성 요청이 정상 트래픽에 없다.
+               # 2026-08-14 외부 POST / 가 컨테이너 내 셸 실행(curl)으로 이어지는 정황이 확인되어
+               # (Redmine msa #155) 임시로 넣었으나, 근본 원인(Next.js)이 패치된 뒤에도 앱이
+               # 받을 이유가 없는 요청을 앞단에서 끊는 편이 안전하므로 유지한다(gateway#291).
+               # auth-api-home 라우트가 위에서 /api/auth/**를 먼저 채가므로 로그인/회원가입/
+               # 프로필 수정에는 영향 없음. www.posselect.com 도 같은 보호를 적용한다.
+               # 재검토 트리거: ① store-front 에 서버 액션/쓰기 route handler 를 추가할 때 —
+               # 이 규칙을 지우지 말고 해당 경로만 위에 허용 라우트로 추가할 것.
+               # ② Traefik 뒤 ClientHost 가 SNAT(10.42.0.1)로만 보이는 문제를 해결할 때.
+               -  id: store-front-block-write
+                  predicates:
+                  - Host=home.posselect.com,www.posselect.com
+                  - Method=POST,PUT,PATCH,DELETE
+                  filters:
+                  - SetStatus=403
+                  uri: no://op
+               -  id: store-front
+                  predicates:
+                  - Host=home.posselect.com,www.posselect.com
+                  uri: http://store-front.customer.svc.cluster.local:3000
+               -  id: product-api
+                  predicates:
+                  - Host=product.posselect.com
+                  - Path=/api/products/**,/api/categories/**,/api/cart/**,/api/wishlists/**
+                  filters:
+                  - AddRequestHeader=X-Channel, 1
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 50
+                       redis-rate-limiter.burstCapacity: 100
+                       key-resolver: "#{@userKeyResolver}"
+                  - name: CircuitBreaker
+                    args:
+                       name: productCircuitBreaker
+                       fallbackUri: forward:/fallback
+                  uri: http://product-api.customer.svc.cluster.local:8080
+               -  id: order-api
+                  predicates:
+                  - Host=product.posselect.com
+                  - Path=/api/orders/**
+                  filters:
+                  - AddRequestHeader=X-Channel, 1
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 20
+                       redis-rate-limiter.burstCapacity: 50
+                       key-resolver: "#{@userKeyResolver}"
+                  - name: CircuitBreaker
+                    args:
+                       name: orderCircuitBreaker
+                       fallbackUri: forward:/fallback
+                  uri: http://order-api.customer.svc.cluster.local:8080
+               # /api/auth/me/grade: 장바구니가 결제 전에 회원 등급 할인을 안내한다(gateway#81).
+               # 이 호스트는 optional-auth 라 비로그인 요청에는 X-User-Id 가 붙지 않고 auth.api 가 401 을 준다.
+               -  id: auth-api-addresses-product
+                  predicates:
+                  - Host=product.posselect.com
+                  - Path=/api/auth/addresses/**,/api/auth/me/grade
+                  uri: http://auth-api.customer.svc.cluster.local:8080
+               # 2026-08-14 보안 사고 대응(Redmine msa #155): product-front도 자체 POST
+               # 핸들러/Server Action이 없어(전부 product-api/order-api/auth-api-addresses-
+               # product가 처리) 같은 완화책 적용.
+               -  id: product-front-block-write
+                  predicates:
+                  - Host=product.posselect.com
+                  - Method=POST,PUT,PATCH,DELETE
+                  filters:
+                  - SetStatus=403
+                  uri: no://op
+               -  id: product-front
+                  predicates:
+                  - Host=product.posselect.com
+                  uri: http://product-front.customer.svc.cluster.local:3000
+               # 2026-08-14 보안 사고 대응(Redmine msa #155): admin-front는 다른 프론트와
+               # 달리 /api/admin/**, /api/login 등을 게이트웨이 라우트 분리 없이 자기 자신이
+               # 직접 처리한다. 그래서 store-front 방식대로 통째로 막으면 관리자 로그인/상품
+               # 관리 기능이 깨진다. /api/** 는 이 carve-out으로 먼저 통과시키고, 그 외
+               # 경로(페이지 라우트)로 오는 쓰기성 요청만 차단한다.
+               -  id: admin-front-api
+                  predicates:
+                  - Host=admin.posselect.com
+                  - Path=/api/**
+                  uri: http://admin-front.customer.svc.cluster.local:3000
+               -  id: admin-front-block-write
+                  predicates:
+                  - Host=admin.posselect.com
+                  - Method=POST,PUT,PATCH,DELETE
+                  filters:
+                  - SetStatus=403
+                  uri: no://op
+               -  id: admin-front
+                  predicates:
+                  - Host=admin.posselect.com
+                  uri: http://admin-front.customer.svc.cluster.local:3000
+               # partner.posselect.com = 파트너센터(외부 판매자 상품 등록, lee-dohyun/partner.front, gateway#279).
+               # admin-front 와 같은 BFF 패턴 — /api/** 는 앱 자신의 route handler(로그인·중계·업로드)가 받고,
+               # 그 외 페이지 경로로 오는 쓰기 요청은 막는다. protected-hosts 에 넣지 않는다: 인증은 partner realm
+               # 토큰으로 partner-front middleware 와 product.api 가 각각 직접 검증한다(게이트웨이 헤더 신뢰 금지).
+               -  id: partner-front-api
+                  predicates:
+                  - Host=partner.posselect.com
+                  - Path=/api/**
+                  uri: http://partner-front.customer.svc.cluster.local:3000
+               -  id: partner-front-block-write
+                  predicates:
+                  - Host=partner.posselect.com
+                  - Method=POST,PUT,PATCH,DELETE
+                  filters:
+                  - SetStatus=403
+                  uri: no://op
+               -  id: partner-front
+                  predicates:
+                  - Host=partner.posselect.com
+                  uri: http://partner-front.customer.svc.cluster.local:3000
+               -  id: monitoring-redirect
+                  predicates:
+                  - Host=monitoring.leedohyun.com
+                  filters:
+                  - RedirectTo=302, https://monitoring.posselect.com
+                  uri: no://op
+               -  id: monitoring
+                  predicates:
+                  - Host=monitoring.posselect.com
+                  uri: http://monitoring-grafana.monitoring.svc.cluster.local:80
+                  filters:
+                  - PreserveHostHeader
+               # storybook.posselect.com/shell/** → posselect-shell의 Storybook 정적 빌드(/storybook/**).
+               #
+               # 디자인 시스템 문서는 저장소가 둘이라 Storybook 빌드도 둘인데(posselect-ui = 프리미티브,
+               # posselect-shell = Header/Footer), posselect-ui의 .storybook/main.ts가 Storybook
+               # Composition(refs)으로 shell 쪽을 사이드바에 끌어와 **한 사이트로 보이게** 하는 설계다
+               # (posselect-shell#13에서 채택). 그런데 composition은 매니저가 브라우저에서 ref의
+               # index.json을 fetch하므로, ref가 다른 호스트(shell.posselect.com)면 크로스 오리진이라
+               # CORS 헤더 없이는 차단된다 — 실제로 차단돼서 허브 사이드바에 "No stories found"만
+               # 떴다(2026-08-23 실측: TypeError: Failed to fetch).
+               #
+               # shell의 nginx에 Access-Control-Allow-Origin을 다는 대신 **같은 오리진으로 묶어**
+               # CORS 문제 자체를 없앤다 — 이 클러스터의 단일 진입점 원칙과도 맞고, 헤더 관리 지점이
+               # 늘지 않는다. shell Storybook 빌드의 에셋 참조가 전부 상대경로(./assets/…, ./sb-manager/…)라
+               # 경로 프리픽스를 바꿔도 깨지지 않는 것을 확인했다.
+               #
+               # 아래 posselect-ui 라우트보다 **반드시 앞에** 있어야 한다 — Host만 보는 그 라우트가
+               # 먼저 매치되면 /shell/**이 posselect-ui로 가버린다.
+               -  id: posselect-shell-storybook-ref
+                  predicates:
+                  - Host=storybook.posselect.com
+                  - Path=/shell/**
+                  filters:
+                  - RewritePath=/shell/?(?<seg>.*), /storybook/$\{seg}
+                  uri: http://posselect-shell-service.default.svc.cluster.local:80
+               # ui.posselect.com과 storybook.posselect.com은 같은 서비스(디자인 시스템 문서
+               # 사이트 = Storybook 정적 빌드)를 가리키는 두 진입점이다. ui.* 가 원래 이름이라
+               # 기존 링크/북마크 호환을 위해 유지하고, storybook.* 을 별칭으로 추가했다.
+               -  id: posselect-ui
+                  predicates:
+                  - Host=ui.posselect.com,storybook.posselect.com
+                  uri: http://posselect-ui-service.default.svc.cluster.local:80
+               -  id: posselect-shell
+                  predicates:
+                  - Host=shell.posselect.com
+                  uri: http://posselect-shell-service.default.svc.cluster.local:80
+               # router-admin(router.leedohyun.com → ASUS 관리페이지 프록시)은 제거했다(gateway#277).
+               # 인증 없이 라우터 로그인 페이지를 인터넷에 노출하고 Origin/Referer 위조로 CSRF 검사까지
+               # 우회하고 있었다. 라우터 관리는 LAN(192.168.50.1)에서만 할 것 — 다시 추가하지 말 것.
 resilience4j:
    circuitbreaker:
       configs:
