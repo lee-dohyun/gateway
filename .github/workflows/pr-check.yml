@@ -18,7 +18,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # AGENTS.md 캐논 블록 손편집 탐지 + 정본 대비 낡음 경고 (gateway#215)
       - name: Canon block integrity
         run: CANON_CHECK_REMOTE=1 bash scripts/verify.d/check-canon-block.sh
@@ -31,7 +31,7 @@ jobs:
         run: ./gradlew test --console=plain
       - name: Upload test report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-report
           path: build/reports/tests/test/
@@ -39,7 +39,7 @@ jobs:
       - name: Generate coverage report
         run: ./gradlew jacocoTestReport --console=plain
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco-report
           path: build/reports/jacoco/test/html
