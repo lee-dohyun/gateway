@@ -37,7 +37,7 @@ dependencies {
 	implementation 'com.nimbusds:nimbus-jose-jwt:9.37.4'
 	constraints {
 		// spring-cloud-starter 가 끌고 오는 bcprov 1.80.2 의 수정본(gateway#247). Spring Cloud 를 올려 이 값을 넘어서면 지운다.
-		implementation 'org.bouncycastle:bcprov-jdk18on:1.85'
+		implementation 'org.bouncycastle:bcprov-jdk18on:1.86'
 	}
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
