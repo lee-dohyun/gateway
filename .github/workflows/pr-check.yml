@@ -22,7 +22,7 @@ jobs:
       # AGENTS.md 캐논 블록 손편집 탐지 + 정본 대비 낡음 경고 (gateway#215)
       - name: Canon block integrity
         run: CANON_CHECK_REMOTE=1 bash scripts/verify.d/check-canon-block.sh
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           java-version: '21'
           distribution: temurin
