@@ -88,7 +88,7 @@ class JwtAuthenticationFilterHomeWishlistTest {
         HttpHeaders forwarded = forward(MockServerHttpRequest.get("https://" + HOME_HOST + "/api/wishlists/product-ids")
                 .header("X-User-Id", "forged-by-client"));
 
-        assertThat(forwarded.containsKey("X-User-Id")).isFalse();
+        assertThat(forwarded.containsHeader("X-User-Id")).isFalse();
     }
 
     @Test
@@ -97,7 +97,7 @@ class JwtAuthenticationFilterHomeWishlistTest {
         HttpHeaders forwarded = forward(MockServerHttpRequest.get("https://" + HOME_HOST + "/api/wishlists-export")
                 .cookie(accessToken("user-sub-1")));
 
-        assertThat(forwarded.containsKey("X-User-Id")).isFalse();
+        assertThat(forwarded.containsHeader("X-User-Id")).isFalse();
     }
 
     private HttpHeaders forward(MockServerHttpRequest.BaseBuilder<?> request) {

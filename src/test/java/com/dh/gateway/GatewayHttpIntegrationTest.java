@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -67,6 +68,8 @@ import reactor.netty.http.server.HttpServer;
                 // 운영 값은 Traefik 파드 대역이다. 테스트 클라이언트는 루프백에서 붙으므로 그 주소를 더한다.
                 "spring.cloud.gateway.server.webflux.trusted-proxies=127\\.0\\.0\\.1|0:0:0:0:0:0:0:1|::1"
         })
+// Boot 4 부터 @SpringBootTest 만으로는 WebTestClient 빈이 생기지 않는다(gateway#348).
+@AutoConfigureWebTestClient
 class GatewayHttpIntegrationTest {
 
     private static final String ISSUER = "https://keycloak.posselect.com/realms/customer";
