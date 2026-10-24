@@ -333,6 +333,31 @@ spring:
                   predicates:
                   - Host=product.posselect.com
                   uri: http://product-front.customer.svc.cluster.local:3000
+               # admin.posselect.com/api/login 은 admin-front(BFF)가 Keycloak staff realm 에 비밀번호 로그인을 대신
+               # 요청하는 경로다. 그 호출은 클러스터 내부 주소로 가므로 공개 Keycloak 호스트 차단
+               # (keycloak-internal-only-block)을 거치지 않는다. Keycloak 의 로그인 시도 제한은 존재하는 계정만 잠그기
+               # 때문에, 사용자명을 바꿔 가며 찔러 보는 시도는 여기서 줄인다(gateway#327).
+               # 클라이언트 주소당 연속 5회, 이후 10초에 1회:
+               #   연속 = burstCapacity / requestedTokens = 50 / 10,  지속 = replenishRate / requestedTokens = 1 / 10 (초당)
+               # - 반드시 아래 admin-front-api(/api/** 통째)보다 앞이어야 한다. LoginRateLimitRouteTest 가 순서·숫자를,
+               #   LoginRateLimitRedisTest 가 실제 Redis 에서의 동작을 고정한다. 한도를 바꿀 때는 두 테스트를 같이 고칠 것.
+               # - Redis 가 죽으면 한도가 조용히 꺼진다(응답 헤더 x-ratelimit-remaining: -1). 그때도 Keycloak 잠금은 남는다.
+               # - 라우트 id 가 키 접두사라 admin / partner 버킷은 서로 공유하지 않는다.
+               -  id: admin-front-login
+                  predicates:
+                  - Host=admin.posselect.com
+                  # 끝 슬래시: PathPattern 은 기본으로 맞춰 주지 않는다. Next.js 는 지금 /api/login/ 을 308 로 /api/login 에
+                  # 돌려보내(2026-10-24 실측) 로그인 시도가 아니지만, 앱 설정이 바뀌어도 한도가 유지되게 같이 받는다.
+                  - Path=/api/login,/api/login/
+                  - Method=POST
+                  filters:
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 1
+                       redis-rate-limiter.requestedTokens: 10
+                       redis-rate-limiter.burstCapacity: 50
+                       key-resolver: "#{@ipKeyResolver}"
+                  uri: http://admin-front.customer.svc.cluster.local:3000
                # 2026-08-14 보안 사고 대응(Redmine msa #155): admin-front는 다른 프론트와
                # 달리 /api/admin/**, /api/login 등을 게이트웨이 라우트 분리 없이 자기 자신이
                # 직접 처리한다. 그래서 store-front 방식대로 통째로 막으면 관리자 로그인/상품
@@ -354,6 +379,21 @@ spring:
                   predicates:
                   - Host=admin.posselect.com
                   uri: http://admin-front.customer.svc.cluster.local:3000
+               # partner.posselect.com/api/login — 위 admin-front-login 과 같은 이유, 같은 한도(partner realm).
+               # 반드시 아래 partner-front-api 보다 앞이어야 한다(같은 테스트가 고정).
+               -  id: partner-front-login
+                  predicates:
+                  - Host=partner.posselect.com
+                  - Path=/api/login,/api/login/
+                  - Method=POST
+                  filters:
+                  - name: RequestRateLimiter
+                    args:
+                       redis-rate-limiter.replenishRate: 1
+                       redis-rate-limiter.requestedTokens: 10
+                       redis-rate-limiter.burstCapacity: 50
+                       key-resolver: "#{@ipKeyResolver}"
+                  uri: http://partner-front.customer.svc.cluster.local:3000
                # partner.posselect.com = 파트너센터(외부 판매자 상품 등록, lee-dohyun/partner.front, gateway#279).
                # admin-front 와 같은 BFF 패턴 — /api/** 는 앱 자신의 route handler(로그인·중계·업로드)가 받고,
                # 그 외 페이지 경로로 오는 쓰기 요청은 막는다. protected-hosts 에 넣지 않는다: 인증은 partner realm
