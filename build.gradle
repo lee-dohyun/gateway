@@ -35,7 +35,7 @@ dependencies {
 	// Boot 4 는 자동 설정을 모듈로 쪼갰다 - WebClient.Builder 빈(JWKS 조회 등)은 이 스타터가 있어야 생긴다(gateway#348).
 	implementation 'org.springframework.boot:spring-boot-starter-webclient'
 	implementation 'io.micrometer:micrometer-registry-prometheus'                 // ✅ /actuator/prometheus
-	implementation 'com.nimbusds:nimbus-jose-jwt:9.37.4'
+	implementation 'com.nimbusds:nimbus-jose-jwt:9.48'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
