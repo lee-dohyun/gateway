@@ -42,6 +42,8 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webflux-test'
 	testImplementation 'io.projectreactor:reactor-test'
+	// 로그인 경로 레이트리밋이 실제 Redis(Lua 스크립트)에서 의도한 숫자로 동작하는지 보는 테스트용(gateway#327).
+	testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
