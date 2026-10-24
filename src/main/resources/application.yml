@@ -130,6 +130,27 @@ spring:
                   predicates:
                   - Host=image.posselect.com
                   uri: http://imgproxy-service.minio.svc.cluster.local:8080
+               # keycloak.posselect.com 은 인터넷에 열려 있지만 브라우저가 실제로 쓰는 건 customer realm 의
+               # 소셜 로그인(…/auth, login-actions, broker, resources)뿐이다. 관리 콘솔·관리 REST, master/staff/
+               # partner realm, 토큰 엔드포인트, 클라이언트 동적 등록은 서버끼리만 쓰고, 그 호출은 전부 클러스터
+               # 내부 주소(keycloak-service.keycloak.svc)로 가서 게이트웨이를 거치지 않는다 — 그래서 공개
+               # 호스트에서는 404 로 끊는다(gateway#327). 2026-10-24 실측: 14일간 외부에서 이 경로로 온 정상
+               # 요청은 0건이었고 스캐너만 realm 이름을 훑고 있었다.
+               # - 반드시 아래 keycloak 라우트보다 앞이어야 한다(Host 만 보는 라우트가 먼저면 전부 다시 열린다).
+               #   KeycloakPublicPathRouteTest 가 순서와 경로를 고정한다.
+               # - 새 서비스가 공개 호스트로 이 경로를 불러야 할 것 같으면 여기를 열지 말고 서비스 쪽을 내부
+               #   주소로 바꿀 것.
+               # - ../ // /./ 같은 비정규 경로는 이 앞단의 Traefik(sanitizePath 기본값)이 정리한다고 가정한다
+               #   (2026-10-24 실측). Traefik 설정을 바꿀 때는 이 가정부터 다시 확인할 것.
+               # - 관리 콘솔 GUI 는 브라우저로 쓸 수 없다(발급자 주소가 공개 호스트로 고정). 관리 작업은 파드 안
+               #   kcadm.sh 로 한다.
+               -  id: keycloak-internal-only-block
+                  predicates:
+                  - Host=keycloak.posselect.com
+                  - Path=/admin/**,/realms/master/**,/realms/staff/**,/realms/partner/**,/realms/{realm}/protocol/openid-connect/token/**,/realms/{realm}/clients-registrations/**
+                  filters:
+                  - SetStatus=404
+                  uri: no://op
                -  id: keycloak
                   predicates:
                   - Host=keycloak.posselect.com
