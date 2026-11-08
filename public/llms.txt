@@ -1,0 +1,12 @@
+# Gateway
+
+> Official platform documentation and AI crawler index (/llms.txt) for AEO (Answer Engine Optimization).
+
+## Core Endpoints
+
+- [Gateway Repository](https://github.com/lee-dohyun/gateway): Source code and architecture overview.
+
+## AI Crawler Policy & AEO
+
+- Structured following the standard /llms.txt specification for ChatGPT Search, Claude, and Perplexity crawlers.
+- Validated via [AccessGuard AI-Readiness Suite](https://ronanchnlps-bit.github.io/).
